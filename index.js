@@ -1,4 +1,11 @@
 import { registerRootComponent } from 'expo';
+import { LogBox } from 'react-native';
+
+// Suppress deprecated warnings (SafeAreaView) and Reanimated overwrites
+LogBox.ignoreLogs([
+    'SafeAreaView has been deprecated',
+    '[Reanimated] The native part of Reanimated',
+]);
 
 import App from './App';
 

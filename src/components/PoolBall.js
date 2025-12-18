@@ -1,119 +1,136 @@
 import React from 'react';
-import Svg, { Circle, Text as SvgText, Rect, Defs, RadialGradient, Stop } from 'react-native-svg';
-import { View, Text } from 'react-native';
+import Svg, { Circle, Text as SvgText, Rect, Defs, RadialGradient, Stop, Ellipse } from 'react-native-svg';
+import { View } from 'react-native';
 
-const BALL_COLORS = {
-    1: '#FDD835', // Yellow
-    2: '#1E88E5', // Blue
-    3: '#E53935', // Red
-    4: '#8E24AA', // Purple
-    5: '#FB8C00', // Orange
-    6: '#43A047', // Green
-    7: '#6D4C41', // Brown
-    8: '#212121', // Black
+// High-Fidelity TV Colors (Base + Shadow)
+const BALL_PALETTE = {
+    1: { base: '#FFD700', shadow: '#DAA520' }, // Yellow
+    2: { base: '#0288D1', shadow: '#01579B' }, // Blue
+    3: { base: '#FF3333', shadow: '#CC0000' }, // Red (Requested)
+    4: { base: '#AB47BC', shadow: '#7B1FA2' }, // Purple
+    5: { base: '#FF9800', shadow: '#E65100' }, // Orange
+    6: { base: '#4CAF50', shadow: '#1B5E20' }, // Green
+    7: { base: '#8D6E63', shadow: '#4E342E' }, // Brown
+    8: { base: '#222222', shadow: '#000000' }, // Black (Requested)
+    0: { base: '#FFFFFF', shadow: '#CFD8DC' }, // Cue Ball (White)
 };
 
-const STRIPE_COLOR = '#FFFFFF';
-
 export default function PoolBall({ number, size = 40, isPotted = false }) {
-    // TV Colors Mapping
-    // 1-8 are their colors. 9-15 correspond to 1-7 but stripes.
-    const baseNumber = number > 8 ? number - 8 : number;
-    const color = BALL_COLORS[baseNumber] || '#000000';
-    const isStripe = number > 8;
     const r = size / 2;
+    // Determine Base/Shadow Colors
+    // Stripes (9-15) map to 1-7. Solids (1-8). 
+    const isStripe = number > 8 && number < 16;
+    const isCue = number === 0;
+    const baseNum = number > 8 ? number - 8 : number;
 
-    const opacity = isPotted ? 0.3 : 1;
+    // Default fallback
+    const palette = BALL_PALETTE[baseNum] || BALL_PALETTE[8];
+
+    // For Stripes: The "Body" is White-ish, and the "Stripe" is colored.
+    // For Solids: The "Body" is colored.
+
+    // 3D Logic:
+    // We define a unique gradient ID for this ball instance to prevent clashes if multiple balls render? 
+    // Actually, in RN SVG, IDs are global. We should unique-ify if possible or just stick to a few shared defs if colors match.
+    // To allow unique colors per ball, we can inject colors directly or use unique IDs. 
+    // Given the small set (15), unique IDs like `grad-${number}` work best.
+
+    const gradId = `ball-grad-${number}`;
+    const highlightId = `specular-${number}`;
+
+    const mainBase = isStripe ? '#FFFFFF' : palette.base;
+    const mainShadow = isStripe ? '#CFD8DC' : palette.shadow;
 
     return (
-        <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ opacity }}>
-            <Defs>
-                {/* Gloss Effect */}
-                <RadialGradient id="gloss" cx="30%" cy="30%" rx="50%" ry="50%" fx="30%" fy="30%">
-                    <Stop offset="0%" stopColor="white" stopOpacity="0.4" />
-                    <Stop offset="100%" stopColor="white" stopOpacity="0" />
-                </RadialGradient>
-            </Defs>
+        <View style={{ position: 'relative' }}>
+            <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                <Defs>
+                    {/* 1. Body Gradient: Off-center radial for dimensionality */}
+                    <RadialGradient id={gradId} cx="35%" cy="35%" rx="60%" ry="60%" fx="25%" fy="25%">
+                        <Stop offset="0%" stopColor={mainBase} stopOpacity="1" />
+                        <Stop offset="100%" stopColor={mainShadow} stopOpacity="1" />
+                    </RadialGradient>
 
-            {/* Base Ball Color */}
-            <Circle cx={r} cy={r} r={r} fill={isStripe ? '#FFFFFF' : color} />
+                    {/* 2. Specular Highlight: Soft white at top-left */}
+                    <RadialGradient id={highlightId} cx="50%" cy="50%" rx="50%" ry="50%" fx="50%" fy="50%">
+                        <Stop offset="0%" stopColor="white" stopOpacity="0.7" />
+                        <Stop offset="100%" stopColor="white" stopOpacity="0" />
+                    </RadialGradient>
 
-            {/* Stripe (if applicable) */}
-            {isStripe && (
-                <View>
-                    {/* SVG clipping for stripe is tricky, simpler hack: 
-                         Draw white ball, then draw thick colored band in middle? 
-                         Or draw colored ball, then draw white caps?
-                         User asked for "White stripe in middle".
-                         So Base = Color, Stripe = White? No, typically base is white, stripe is color.
-                         But user said "For 9-15: White stripe in the middle".
-                         Wait, standard balls are White with Colored Stripe. 
-                         But user said "Weißer Streifen in der Mitte". 
-                         Let's interpret strictly: Color Ball with "White Stripe"? That sounds inverted.
-                         Standard TV: White Ball, Colored Stripe.
-                         User Specs: "1/9: Gelb... Für 9-15: Ein weißer Streifen in der Mitte".
-                         Okay, I will draw the Color background, and put a White Rect in middle?
-                         Or maybe they meant "Colored Stripe on White".
-                         Let's assume Standard Look (White ball, Colored Stripe) but follow user's text literally if possible?
-                         "Ein weißer Streifen in der Mitte" implies the rest is colored?
-                         Actually, usually user descriptions can be slightly off.
-                         Let's do: Base Color. If Stripe -> Draw White Rect in middle? No that would look like a flag.
-                         Standard Stripe is: Top/Bottom White, Middle Color.
-                         If user wants "White Stripe in Middle", that means Top/Bottom is Color.
-                         Let's stick to Standard Visuals: White Ball, Colored Band.
-                         Wait, user said "1/9: Gelb". 
-                         Okay, if I make 9 Yellow, and add a "White Stripe", it's distinct from 1.
-                         Let's try to make it look good. I'll make the base White for Stripe balls and draw a wide colored band.
-                     */}
-                    <Circle cx={r} cy={r} r={r} fill="#FFFFFF" />
-                    <Rect x={0} y={size * 0.2} width={size} height={size * 0.6} fill={color} />
-                </View>
-            )}
+                    {/* 3. Stripe Gradient (Vertical depth for the band) */}
+                    <RadialGradient id={`stripe-${number}`} cx="50%" cy="50%" rx="60%" ry="60%" fx="50%" fy="50%">
+                        <Stop offset="0%" stopColor={palette.base} stopOpacity="1" />
+                        <Stop offset="90%" stopColor={palette.shadow} stopOpacity="1" />
+                    </RadialGradient>
+                </Defs>
 
-            {/* If user STRICTLY meant "White Stripe in Middle of Color Ball" -> 
-                Base = Color. Rect = White.
-                Let's stick to Standard (White Ball, Colored Stripe) because "1/9: Gelb" usually implies the identifiable color.
-                Correction: I can't use View inside Svg. Must use SVG elements.
-            */}
+                {/* --- Base Sphere --- */}
+                <Circle cx={r} cy={r} r={r} fill={`url(#${gradId})`} />
 
-            {isStripe ? (
-                <>
-                    {/* White Base */}
-                    <Circle cx={r} cy={r} r={r} fill="#FFFFFF" />
-                    {/* Colored Band (approximated as Rect masked by Circle? Native SVG mask is complex) 
-                        Simpler: Draw colored circle, then draw white 'caps' (segments)?
-                        Or Draw White Circle, then ClipPath for Band?
-                        Let's keep it simple: White Circle. Colored Rect in middle. Masked by Circle.
-                    */}
+                {/* --- Stripe Band (if applicable) --- */}
+                {isStripe && (
+                    <Rect
+                        x="0"
+                        y={size * 0.2}
+                        width={size}
+                        height={size * 0.6}
+                        fill={`url(#stripe-${number})`}
+                        // Mask it to the circle shape simply by using clipPath in complex apps, 
+                        // but here we can just draw another circle with clipPath or use local clipping.
+                        // Simple 2D approach: The ball is a circle. We can wrap the whole Group in a ClipPath of the ball.
+                        clipPath={`url(#clip-${number})`}
+                    />
+                )}
+
+                {/* Stripe Clip Definition */}
+                {isStripe && (
                     <Defs>
-                        <Circle id="ballShape" cx={r} cy={r} r={r} />
+                        <Circle id={`clip-${number}`} cx={r} cy={r} r={r} />
                     </Defs>
-                    {/* Clip everything to ball shape */}
-                    <Circle cx={r} cy={r} r={r} fill="#FFFFFF" />
-                    <Rect x="0" y={size * 0.25} width={size} height={size * 0.5} fill={color} clipPath="url(#ballShape)" />
-                </>
-            ) : (
-                <Circle cx={r} cy={r} r={r} fill={color} />
+                )}
+
+                {/* --- Badge (Number Circle) --- */}
+                {/* Slightly off-white #F0F0F0, maybe small drop shadow or border */}
+                <Circle cx={r} cy={r} r={size * 0.4} fill="#F0F0F0" />
+
+                {/* --- Number --- */}
+                <SvgText
+                    x={r}
+                    y={r + (size * 0.14)}
+                    fill="#000000"
+                    fontSize={size * 0.5}
+                    fontWeight="900"
+                    textAnchor="middle"
+                    fontFamily="sans-serif" // Cleaner look
+                >
+                    {number}
+                </SvgText>
+
+                {/* --- Specular Highlight (The "Plastic" Gloss) --- */}
+                {/* Ellipse at 10-11 o'clock position (Top Left) */}
+                {/* This simulates the light source reflecting off the sphere */}
+                <Ellipse
+                    cx={size * 0.3}
+                    cy={size * 0.3}
+                    rx={size * 0.25}
+                    ry={size * 0.18}
+                    fill={`url(#${highlightId})`}
+                    transform={`rotate(-45, ${size * 0.3}, ${size * 0.3})`}
+                />
+            </Svg>
+
+            {/* Interaction: Dark overlay when potted (Active Inactive state) */}
+            {isPotted && (
+                <View style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: size,
+                    height: size,
+                    borderRadius: size / 2,
+                    backgroundColor: 'rgba(0,0,0,0.6)', // "Dunkel/Inaktiv" overlay
+                }} />
             )}
-
-
-            {/* Gloss Overlay */}
-            <Circle cx={r} cy={r} r={r} fill="url(#gloss)" />
-
-            {/* Number Circle (White Background) */}
-            <Circle cx={r} cy={r} r={size * 0.4} fill="#FFFFFF" />
-
-            {/* Number Text */}
-            <SvgText
-                x={r}
-                y={r + (size * 0.14)} // visual centering
-                fill="#000000"
-                fontSize={size * 0.5}
-                fontWeight="bold"
-                textAnchor="middle"
-            >
-                {number}
-            </SvgText>
-        </Svg>
+        </View>
     );
 }

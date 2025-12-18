@@ -1,63 +1,46 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import PoolBall from './PoolBall';
 
-export default function Rack({ ballsOnTable = 15, activeBalls, onToggle }) {
+export default function Rack({ ballsOnTable, activeBalls, onToggle, is141Mode = false }) {
     // Rack Layout: Triangle
-    // Controlled Component: receives 'activeBalls' (Set of indices) from parent.
-    // Renders all 15 positions, ghosts those not in 'activeBalls'.
+    // 14.1 Mode: Apex ball (Position 0) is EMPTY.
+    // We strictly render positions. The BALL NUMBER rendered is derived from index + 1 (or special logic).
 
-    const ballSize = 38;
-    const gap = 2; // tight rack
-    const rowHeight = ballSize * 0.85; // hexagonal packing height (sqrt(3)/2)
+    const ballSize = 48;
+    const gap = 2;
+    const rowHeight = ballSize * 0.86;
 
     // Coordinates generator
     const getPos = (row, col) => {
         // Center the triangle.
-        // Row 0: 1 ball (Offset 0)
-        // Row 1: 2 balls (Offset -0.5)
-        // Row i: i+1 balls. x-offset = - (i * ballSize/2)
         const xOffset = -(row * (ballSize + gap) / 2);
         const x = xOffset + col * (ballSize + gap);
         const y = row * rowHeight;
         return { x, y };
     };
 
-    // Rows structure: [start_index, count]
-    const rows = [
-        [0, 1],
-        [1, 2],
-        [3, 3],
-        [6, 4],
-        [10, 5]
-    ];
+    // Calculate positions for 5 rows standard triangle
+    // 14.1: If is141Mode is true, we SKIP index 0 (Apex).
+    // But we still want 14 clickable zones.
+    // Actually, "activeBalls" set tracks INDICES. 
+    // If we map 0..14 to the triangle positions.
+    // 15 positions total in a 5-row triangle.
+    // Index 0 is Apex.
+    // If is141Mode, index 0 is irrelevant/hidden.
 
-    // Helper to map linear index (0..14) to ball number (1..15)
-    // 8-ball pattern just for fun?
-    // 1 (Apex), 8 (Center of 3rd row -> index 4).
-    const mapIndexToNumber = (i) => {
-        // User requested sorted ascending order (1-15)
-        return i + 1;
-    };
+    // Let's render 15 positions.
+    // If is141Mode && i === 0 -> Don't render.
 
     return (
-        <View className="items-center justify-center p-4 bg-knthlz-dark/50 rounded-xl border border-gray-800"
+        <View className="items-center justify-center p-4"
             style={{ width: 300, height: 260 }}>
 
             <View style={{ position: 'relative', width: 250, height: 200, alignItems: 'center' }}>
-                {/* Render 15 balls, check if they are in activeBalls or should be hidden entirely?
-                     Logic: We render all 15 positions.
-                     State: 
-                     - activeBalls.has(i) -> Visible
-                     - !activeBalls.has(i) -> Potted (Ghost)
-                     
-                     However, if ballsOnTable < 15, some balls conceptually don't exist.
-                     (e.g. 14.1 end of rack, only 1 ball left).
-                     Parent manages `activeBalls`. If parent wants only 1 ball, set has only 1 index.
-                     The other 14 are "Potted" (Ghost).
-                     Does user want to see "Empty Ghost Spaces"? Yes, "Muster erkennbar bleibt".
-                  */}
                 {Array.from({ length: 15 }, (_, i) => {
+                    // 14.1 Logic: Apex (i=0) is empty/break ball spot.
+                    if (is141Mode && i === 0) return null;
+
                     // Find row/col
                     let r = 0, c = 0, idx = i;
                     if (idx >= 10) { r = 4; c = idx - 10; }
@@ -68,7 +51,15 @@ export default function Rack({ ballsOnTable = 15, activeBalls, onToggle }) {
 
                     const { x, y } = getPos(r, c);
 
+                    // State: Is this ball active (on table)?
+                    // If activeBalls.has(i), it IS on table.
+                    // If not, it is potted (ghost).
                     const isPotted = !activeBalls.has(i);
+
+                    // Ball Number mapping
+                    // i=0 is 1-ball. i=14 is 15-ball.
+                    // In 14.1, the balls in rack are random usually, but for UI we just show numbers.
+                    // We can just use i+1.
 
                     return (
                         <TouchableOpacity
@@ -77,12 +68,12 @@ export default function Rack({ ballsOnTable = 15, activeBalls, onToggle }) {
                             onPress={() => onToggle(i)}
                             style={{
                                 position: 'absolute',
-                                left: 125 + x - ballSize / 2, // 125 is half of container width 250
+                                left: 125 + x - ballSize / 2,
                                 top: y + 20
                             }}
                         >
                             <PoolBall
-                                number={mapIndexToNumber(i)}
+                                number={i + 1}
                                 size={ballSize}
                                 isPotted={isPotted}
                             />

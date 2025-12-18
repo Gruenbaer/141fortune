@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 
 import { t } from '../utils/i18n';
 import { useGame } from '../store/GameContext';
@@ -20,14 +20,20 @@ export default function HomeScreen({ navigation }) {
         <View className="flex-1 bg-knthlz-dark">
             <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 50 }}>
                 {/* Logo Area */}
+                {/* Logo Area */}
                 <View className="items-center mb-10 mt-10">
-                    <View className="bg-knthlz-surface p-4 rounded-full mb-4 border-2 border-knthlz-green shadow-lg shadow-knthlz-green/50">
-                        <View className="w-16 h-16 bg-knthlz-green rounded-full items-center justify-center">
-                            <Text className="text-knthlz-dark font-bold text-2xl">14</Text>
-                        </View>
+                    {/* KNTHLZ Logo */}
+                    <View className="bg-white p-2 rounded-xl mb-4 shadow-lg active:scale-95 duration-200">
+                        <Image
+                            source={require('../../assets/knthlz_logo.png')}
+                            style={{ width: 120, height: 120 }}
+                            resizeMode="contain"
+                        />
                     </View>
+
                     <Text className="text-white text-3xl font-extrabold text-center tracking-tight">FORTUNE 14/2</Text>
                     <Text className="text-knthlz-dim text-sm mt-2 font-bold uppercase tracking-widest">KNTHLZ Edition</Text>
+                    <Text className="text-gray-600 text-xs mt-1 font-mono">v2.0.0</Text>
                 </View>
 
                 {/* Main Action: New Game (Straight Pool) */}
@@ -35,7 +41,7 @@ export default function HomeScreen({ navigation }) {
 
                 <GameButton
                     title={t('newGame')}
-                    onPress={() => navigation.navigate('Match')}
+                    onPress={() => navigation.navigate('MatchSetup')}
                     color="bg-knthlz-green"
                 />
 

@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "Fortune 14/2",
-    "slug": "fortune-14-2",
-    "version": "1.0.0",
+    "slug": "fortune-pool",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

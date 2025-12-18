@@ -1,70 +1,45 @@
 import React, { useMemo } from 'react';
-import { View, Text, FlatList, ScrollView, Dimensions } from 'react-native';
+import { View, Text, ScrollView, Dimensions } from 'react-native';
 import { useGame } from '../store/GameContext';
 import { LineChart } from 'react-native-chart-kit';
-import { t } from '../utils/i18n';
-import { styled } from 'nativewind';
+import { Svg, Rect } from 'react-native-svg';
 
 const screenWidth = Dimensions.get('window').width;
 
-const StatBox = ({ label, p1Value, p2Value }) => (
-    <View className="flex-row justify-between items-center bg-knthlz-surface p-3 mb-2 rounded border border-gray-800">
-        <Text className="text-white font-bold w-16 text-center">{p1Value}</Text>
-        <Text className="text-knthlz-dim text-xs uppercase font-bold">{label}</Text>
-        <Text className="text-white font-bold w-16 text-center">{p2Value}</Text>
+const StatRow = ({ label, p1, p2, highlight = false }) => (
+    <View className={`flex-row justify-between items-center py-3 px-4 border-b border-gray-800 ${highlight ? 'bg-gray-800/50' : ''}`}>
+        <Text className={`font-mono font-bold text-lg ${highlight ? 'text-knthlz-green' : 'text-white'}`}>{p1}</Text>
+        <Text className="text-knthlz-dim text-xs font-bold uppercase tracking-widest">{label}</Text>
+        <Text className={`font-mono font-bold text-lg ${highlight ? 'text-blue-400' : 'text-white'}`}>{p2}</Text>
     </View>
 );
-
-const InningItem = ({ item, index }) => {
-    const isP1 = item.player === 1;
-    return (
-        <View className="flex-row justify-between items-center bg-knthlz-surface p-3 mb-1 border-b border-gray-800">
-            <View className="flex-row items-center w-12">
-                <Text className="text-knthlz-dim font-mono text-xs">#{index + 1}</Text>
-            </View>
-
-            <View className="flex-1 flex-row items-center justify-center">
-                {/* Player Indicator & Points */}
-                <Text className={`font-bold text-lg ${isP1 ? 'text-knthlz-green' : 'text-knthlz-dim'}`}>
-                    {isP1 ? (item.penalty > 0 ? `-${item.penalty}` : item.points) : ''}
-                </Text>
-            </View>
-
-            <View className="w-8 items-center"><Text className="text-gray-700">|</Text></View>
-
-            <View className="flex-1 flex-row items-center justify-center">
-                <Text className={`font-bold text-lg ${!isP1 ? 'text-knthlz-green' : 'text-knthlz-dim'}`}>
-                    {!isP1 ? (item.penalty > 0 ? `-${item.penalty}` : item.points) : ''}
-                </Text>
-            </View>
-
-            <View className="w-12 items-end">
-                <Text className="text-knthlz-dim text-xs">{item.total}</Text>
-            </View>
-        </View>
-    );
-};
 
 export default function StatisticsScreen() {
     const { inningHistory, player1, player2 } = useGame();
 
-    // Compute Stats
+    // Compute Match Stats
     const stats = useMemo(() => {
         let p1Innings = 0, p2Innings = 0;
         let p1HighRun = 0, p2HighRun = 0;
 
         inningHistory.forEach(turn => {
+            const points = turn.points; // Raw points scored (ignoring penalties for High Run?) 
+            // Usually High Run = Points scored in one visit.
+            // turn.points includes potted balls.
+            // turn.penalty is separate.
+            // High Run should be just 'points'.
+
             if (turn.player === 1) {
                 p1Innings++;
-                if (turn.points > p1HighRun) p1HighRun = turn.points;
+                if (points > p1HighRun) p1HighRun = points;
             } else {
                 p2Innings++;
-                if (turn.points > p2HighRun) p2HighRun = turn.points;
+                if (points > p2HighRun) p2HighRun = points;
             }
         });
 
-        const p1Avg = p1Innings > 0 ? (player1.score / p1Innings).toFixed(1) : "0.0";
-        const p2Avg = p2Innings > 0 ? (player2.score / p2Innings).toFixed(1) : "0.0";
+        const p1Avg = p1Innings > 0 ? (player1.score / p1Innings).toFixed(2) : "0.00";
+        const p2Avg = p2Innings > 0 ? (player2.score / p2Innings).toFixed(2) : "0.00";
 
         return {
             p1Innings, p2Innings,
@@ -73,27 +48,20 @@ export default function StatisticsScreen() {
         };
     }, [inningHistory, player1, player2]);
 
-    // Prepare Chart Data
-    // We need cumulative score arrays.
-    // inningHistory is reversed (newest first). Reverse it back.
+    // Graph Data
     const chartData = useMemo(() => {
         const p1Scores = [0];
         const p2Scores = [0];
         let p1Total = 0;
         let p2Total = 0;
 
-        // Process chronological order
+        // Reconstruct timeline
         [...inningHistory].reverse().forEach(turn => {
             const net = turn.points - turn.penalty;
             if (turn.player === 1) {
                 p1Total += net;
                 p1Scores.push(p1Total);
-                // Push last known for P2 to keep graph aligned? 
-                // LineChart usually expects same length or uses index.
-                // Let's just push current total for BOTH for every inning? 
-                // Or simplified: Just push updates.
-                // Better: Push a data point for every inning index.
-                p2Scores.push(p2Total);
+                p2Scores.push(p2Total); // Keep sync
             } else {
                 p2Total += net;
                 p2Scores.push(p2Total);
@@ -101,20 +69,19 @@ export default function StatisticsScreen() {
             }
         });
 
-        // Cap data points if too many (e.g. last 20 innings) to prevent overcrowding?
-        // For now, show all.
+        // Cap data points for performance if game is long?
         return {
-            labels: Array.from({ length: p1Scores.length }, (_, i) => i % 5 === 0 ? i.toString() : ''), // sparse labels
+            labels: Array.from({ length: p1Scores.length }, (_, i) => i % 5 === 0 ? i.toString() : ''),
             datasets: [
                 {
                     data: p1Scores,
-                    color: (opacity = 1) => `rgba(204, 255, 0, ${opacity})`, // Neon Green
-                    strokeWidth: 2
+                    color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`, // Emerald-500
+                    strokeWidth: 3
                 },
                 {
                     data: p2Scores,
-                    color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`, // Blue (P2)
-                    strokeWidth: 2
+                    color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`, // Blue-500
+                    strokeWidth: 3
                 }
             ],
             legend: [player1.name, player2.name]
@@ -123,73 +90,46 @@ export default function StatisticsScreen() {
 
     return (
         <ScrollView className="flex-1 bg-knthlz-dark">
-            {/* Header Score */}
-            <View className="flex-row justify-between items-center p-6 bg-knthlz-surface/50">
-                <View className="items-center">
-                    <Text className="text-xl font-bold text-knthlz-green">{player1.name}</Text>
-                    <Text className="text-4xl font-mono font-bold text-white">{player1.score}</Text>
-                </View>
-                <View className="items-center px-4">
-                    <Text className="text-knthlz-dim font-bold text-xs uppercase">VS</Text>
-                </View>
-                <View className="items-center">
-                    <Text className="text-xl font-bold text-blue-400">{player2.name}</Text>
-                    <Text className="text-4xl font-mono font-bold text-white">{player2.score}</Text>
+            <View className="p-6 pb-2 border-b border-gray-800 bg-knthlz-surface">
+                <Text className="text-white text-2xl font-bold mb-4 text-center">Match Statistics</Text>
+
+                {/* Stats Table */}
+                <View className="bg-knthlz-dark rounded-xl border border-gray-800 overflow-hidden">
+                    {/* Header Row */}
+                    <View className="flex-row justify-between p-3 bg-gray-900">
+                        <Text className="text-knthlz-green font-bold text-center w-1/3">{player1.name}</Text>
+                        <Text className="text-gray-500 font-bold text-center w-1/3">VS</Text>
+                        <Text className="text-blue-400 font-bold text-center w-1/3">{player2.name}</Text>
+                    </View>
+
+                    <StatRow label="Score" p1={player1.score} p2={player2.score} highlight />
+                    <StatRow label="Innings" p1={stats.p1Innings} p2={stats.p2Innings} />
+                    <StatRow label="High Run" p1={stats.p1HighRun} p2={stats.p2HighRun} />
+                    <StatRow label="GD (Avg)" p1={stats.p1Avg} p2={stats.p2Avg} />
                 </View>
             </View>
 
-            {/* Matrix */}
-            <View className="p-4">
-                <Text className="text-knthlz-dim mb-2 text-xs font-bold uppercase tracking-widest">{t('statistics')}</Text>
-                <StatBox label={t('highRun')} p1Value={stats.p1HighRun} p2Value={stats.p2HighRun} />
-                <StatBox label={t('avg')} p1Value={stats.p1Avg} p2Value={stats.p2Avg} />
-                <StatBox label={t('innings')} p1Value={stats.p1Innings} p2Value={stats.p2Innings} />
-            </View>
-
-            {/* Chart */}
-            <View className="items-center my-4">
-                <Text className="text-knthlz-dim mb-2 text-xs font-bold uppercase tracking-widest text-left w-full pl-4">{t('progression')}</Text>
+            {/* Graph */}
+            <View className="p-4 pt-6">
+                <Text className="text-knthlz-dim text-xs font-bold uppercase tracking-widest mb-4 ml-2">Score Progression</Text>
                 <LineChart
                     data={chartData}
-                    width={screenWidth - 16}
+                    width={screenWidth - 32}
                     height={220}
                     chartConfig={{
-                        backgroundColor: "#1a1a1a",
-                        backgroundGradientFrom: "#1a1a1a",
-                        backgroundGradientTo: "#1a1a1a",
+                        backgroundColor: "#0f172a", // kntlz-dark
+                        backgroundGradientFrom: "#0f172a",
+                        backgroundGradientTo: "#0f172a",
                         decimalPlaces: 0,
                         color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                        labelColor: (opacity = 1) => `rgba(136, 136, 136, ${opacity})`,
-                        style: {
-                            borderRadius: 16
-                        },
-                        propsForDots: {
-                            r: "3",
-                            strokeWidth: "1",
-                            stroke: "#2b2b2b"
-                        }
+                        labelColor: (opacity = 1) => `rgba(148, 163, 184, ${opacity})`, // slate-400
+                        propsForDots: { r: "0" }, // Hide dots for cleaner look
+                        propsForBackgroundLines: { strokeDasharray: "" } // Solid grid
                     }}
                     bezier
-                    style={{
-                        marginVertical: 8,
-                        borderRadius: 16
-                    }}
+                    style={{ borderRadius: 16 }}
                 />
             </View>
-
-            {/* History List */}
-            <View className="p-4 flex-1">
-                <Text className="text-knthlz-dim mb-2 text-xs font-bold uppercase tracking-widest">{t('inningHistory')}</Text>
-                {inningHistory.length === 0 ? (
-                    <Text className="text-gray-600 text-center italic mt-4">No Data</Text>
-                ) : (
-                    inningHistory.map((item, index) => (
-                        <InningItem key={index} item={item} index={inningHistory.length - 1 - index} />
-                    ))
-                )}
-            </View>
-
-            <View className="h-20" />
         </ScrollView>
     );
 }

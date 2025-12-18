@@ -7,10 +7,12 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GameProvider } from './src/store/GameContext';
 
+
 import HomeScreen from './src/screens/HomeScreen';
 import GameSetScreen from './src/screens/GameSetScreen';
 import Game141Screen from './src/screens/Game141Screen'; // Keep for logic ref needed
 import MatchScreen from './src/screens/MatchScreen';
+import MatchSetupScreen from './src/screens/MatchSetupScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import PlayersScreen from './src/screens/PlayersScreen';
@@ -36,6 +38,7 @@ export default function App() {
             <Stack.Screen name="GameSet" component={GameSetScreen} />
             <Stack.Screen name="Game141" component={Game141Screen} options={{ title: '14.1 Straight Pool' }} />
             <Stack.Screen name="Match" component={MatchScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="MatchSetup" component={MatchSetupScreen} options={{ title: 'New Game' }} />
             <Stack.Screen name="Statistics" component={StatisticsScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="History" component={HistoryScreen} />
