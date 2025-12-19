@@ -74,7 +74,9 @@ class _MatchScreenState extends State<MatchScreen> {
     final pointsToAdd = _rackStartCount - _activeRackBalls.length;
     setState(() {
       _pendingPoints += pointsToAdd;
-      _resetRack(15);
+      // Don't reset balls - only update baseline count
+      _rackStartCount = 15;
+      _lastKnownBallCount = 15;
     });
   }
 
@@ -90,6 +92,11 @@ class _MatchScreenState extends State<MatchScreen> {
       return;
     }
 
+    // Check victory BEFORE turn switches
+    final currentPlayer = provider.turn == 1 ? provider.player1 : provider.player2;
+    final currentGoal = provider.turn == 1 ? provider.gameSettings.goalP1 : provider.gameSettings.goalP2;
+    final willWin = (currentPlayer.score + currentRun) >= currentGoal;
+
     provider.processTurn141(
       points: currentRun > 0 ? currentRun : 0,
       foulPoints: _foulCount,
@@ -98,17 +105,17 @@ class _MatchScreenState extends State<MatchScreen> {
       newBallsOnTable: _activeRackBalls.length,
     );
 
-    final goalReached = (provider.turn == 1 && provider.player1.score >= provider.gameSettings.goalP1) ||
-                        (provider.turn == 2 && provider.player2.score >= provider.gameSettings.goalP2);
-
     setState(() {
       _pendingPoints = 0;
       _foulCount = 0;
       _isSafety = false;
     });
 
-    if (goalReached) {
-      _showScorecard(context, provider);
+    if (willWin) {
+      // Delay slightly to let UI update before showing dialog
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _showScorecard(context, provider);
+      });
     } else {
       // RESET local baseline for the next player so their run starts at 0
       setState(() {
