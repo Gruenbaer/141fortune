@@ -31,8 +31,9 @@ class _MatchScreenState extends State<MatchScreen> {
   int? _lastKnownBallCount;
 
   void _resetRack(int count, {bool isUndoReset = false}) {
-    // Only reset ball positions on undo - otherwise keep existing balls stable
-    if (isUndoReset) {
+    // Reset ball positions on: 1) Initial load, 2) Undo operations
+    // Don't reset during normal gameplay to keep balls stable
+    if (isUndoReset || _lastKnownBallCount == null) {
       setState(() {
         _activeRackBalls = Set.from(Iterable.generate(count));
         _rackStartCount = count;
@@ -44,9 +45,11 @@ class _MatchScreenState extends State<MatchScreen> {
   void _toggleRackBall(int idx) {
     setState(() {
       if (_activeRackBalls.contains(idx)) {
+        // Ball is on table, pot it
         if (_activeRackBalls.length <= 1) return;
         _activeRackBalls.remove(idx);
       } else {
+        // Ball is potted, restore it
         _activeRackBalls.add(idx);
       }
     });
@@ -74,7 +77,8 @@ class _MatchScreenState extends State<MatchScreen> {
     final pointsToAdd = _rackStartCount - _activeRackBalls.length;
     setState(() {
       _pendingPoints += pointsToAdd;
-      // Don't reset balls - only update baseline count
+      // Reset all 15 balls to the table
+      _activeRackBalls = Set.from(Iterable.generate(15));
       _rackStartCount = 15;
       _lastKnownBallCount = 15;
     });
