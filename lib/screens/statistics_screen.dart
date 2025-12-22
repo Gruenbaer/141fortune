@@ -1,152 +1,284 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:fl_chart/fl_chart.dart';
-import '../providers/game_provider.dart';
-import '../models/player.dart';
+import '../services/player_service.dart';
+import '../l10n/app_localizations.dart';
+import '../theme/steampunk_theme.dart';
+import '../widgets/steampunk_widgets.dart';
 
-class StatisticsScreen extends StatelessWidget {
+class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
 
   @override
+  State<StatisticsScreen> createState() => _StatisticsScreenState();
+}
+
+class _StatisticsScreenState extends State<StatisticsScreen> {
+  final PlayerService _playerService = PlayerService();
+  List<Player> _players = [];
+  bool _isLoading = true;
+  String _sortBy = 'gamesPlayed'; // Default sort
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlayers();
+  }
+
+  Future<void> _loadPlayers() async {
+    setState(() => _isLoading = true);
+    final players = await _playerService.getAllPlayers();
+    setState(() {
+      _players = players;
+      _sortPlayers();
+      _isLoading = false;
+    });
+  }
+
+  void _sortPlayers() {
+    switch (_sortBy) {
+      case 'gamesPlayed':
+        _players.sort((a, b) => b.gamesPlayed.compareTo(a.gamesPlayed));
+        break;
+      case 'winRate':
+        _players.sort((a, b) => b.winRate.compareTo(a.winRate));
+        break;
+      case 'avgPoints':
+        _players.sort((a, b) => b.averagePointsPerGame.compareTo(a.averagePointsPerGame));
+        break;
+      case 'highestRun':
+        _players.sort((a, b) => b.highestRun.compareTo(a.highestRun));
+        break;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<GameProvider>(context);
-    final p1 = provider.player1;
-    final p2 = provider.player2;
-    final innings = provider.inningHistory;
-
-    // Calculations
-    int p1InningsCount = 0;
-    int p2InningsCount = 0;
-    int p1HighRun = 0;
-    int p2HighRun = 0;
-
-    for (var turn in innings) {
-      if (turn.player == 1) {
-        p1InningsCount++;
-        if (turn.points > p1HighRun) p1HighRun = turn.points;
-      } else {
-        p2InningsCount++;
-        if (turn.points > p2HighRun) p2HighRun = turn.points;
-      }
-    }
-
-    final p1Avg = p1InningsCount > 0 ? (p1.score / p1InningsCount).toStringAsFixed(2) : "0.00";
-    final p2Avg = p2InningsCount > 0 ? (p2.score / p2InningsCount).toStringAsFixed(2) : "0.00";
-
-    // Chart Data
-    final p1Scores = [0.0];
-    final p2Scores = [0.0];
-    double p1Total = 0;
-    double p2Total = 0;
-
-    for (var turn in innings.reversed) {
-      final net = (turn.points - turn.penalty).toDouble();
-      if (turn.player == 1) {
-        p1Total += net;
-      } else {
-        p2Total += net;
-      }
-      p1Scores.add(p1Total);
-      p2Scores.add(p2Total);
-    }
-
+    final l10n = AppLocalizations.of(context);
+    final theme = SteampunkTheme.themeData;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(provider.t('statistics').toUpperCase()),
+        title: Text(l10n.statistics, style: theme.textTheme.displayMedium),
+        centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
+        iconTheme: IconThemeData(color: SteampunkTheme.brassPrimary),
+        actions: [
+          PopupMenuButton<String>(
+            icon: Icon(Icons.sort, color: SteampunkTheme.brassPrimary),
+            color: SteampunkTheme.mahoganyLight,
+            onSelected: (value) {
+              setState(() {
+                _sortBy = value;
+                _sortPlayers();
+              });
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(value: 'gamesPlayed', child: Text(l10n.gamesPlayed, style: theme.textTheme.bodyMedium)),
+              PopupMenuItem(value: 'winRate', child: Text(l10n.winRate, style: theme.textTheme.bodyMedium)),
+              PopupMenuItem(value: 'avgPoints', child: Text(l10n.avgPoints, style: theme.textTheme.bodyMedium)),
+              PopupMenuItem(value: 'highestRun', child: Text(l10n.highestRun, style: theme.textTheme.bodyMedium)),
+            ],
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // Stats Table
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF1F2937)),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    color: const Color(0xFF0F172A),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(child: Text(p1.name, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF22C55E), fontWeight: FontWeight.bold))),
-                        const Text("VS", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-                        Expanded(child: Text(p2.name, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF3B82F6), fontWeight: FontWeight.bold))),
-                      ],
+      body: SteampunkBackground(
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator(color: SteampunkTheme.amberGlow))
+              : _players.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.bar_chart, size: 64, color: SteampunkTheme.brassDark),
+                          const SizedBox(height: 16),
+                          Text(
+                            l10n.noStatistics,
+                            style: theme.textTheme.displaySmall,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            l10n.playGamesToSee,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      color: SteampunkTheme.amberGlow,
+                      backgroundColor: SteampunkTheme.mahoganyLight,
+                      onRefresh: _loadPlayers,
+                      child: ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          // Overall Stats Card
+                          _buildOverallStatsCard(l10n),
+                          
+                          const SizedBox(height: 24),
+                          
+                          // Player Rankings Header
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                            decoration: BoxDecoration(
+                              border: Border(bottom: BorderSide(color: SteampunkTheme.brassPrimary, width: 2)),
+                              gradient: LinearGradient(
+                                colors: [SteampunkTheme.brassDark.withOpacity(0.5), Colors.transparent],
+                              ),
+                            ),
+                            child: Text(
+                              l10n.playerRankings.toUpperCase(),
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                letterSpacing: 1.5,
+                                color: SteampunkTheme.brassBright,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          
+                          ..._players.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final player = entry.value;
+                            return _buildPlayerCard(player, index + 1);
+                          }).toList(),
+                        ],
+                      ),
                     ),
-                  ),
-                  _buildStatRow(provider.t('score'), "${p1.score}", "${p2.score}", highlight: true),
-                  _buildStatRow(provider.t('innings'), "$p1InningsCount", "$p2InningsCount"),
-                  _buildStatRow(provider.t('highRun'), "$p1HighRun", "$p2HighRun"),
-                  _buildStatRow(provider.t('avg'), p1Avg, p2Avg),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            // Progression Chart
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(provider.t('progression').toUpperCase(), style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 2)),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              height: 250,
-              padding: const EdgeInsets.only(right: 16, top: 16, bottom: 16),
-              child: LineChart(
-                LineChartData(
-                  gridData: const FlGridData(show: true, drawVerticalLine: false),
-                  titlesData: const FlTitlesData(
-                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40)),
-                    bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30)),
-                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: p1Scores.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
-                      isCurved: true,
-                      color: const Color(0xFF22C55E),
-                      barWidth: 3,
-                      dotData: const FlDotData(show: false),
-                    ),
-                    LineChartBarData(
-                      spots: p2Scores.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
-                      isCurved: true,
-                      color: const Color(0xFF3B82F6),
-                      barWidth: 3,
-                      dotData: const FlDotData(show: false),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  Widget _buildStatRow(String label, String p1, String p2, {bool highlight = false}) {
+  Widget _buildOverallStatsCard(AppLocalizations l10n) {
+    final totalGames = _players.fold<int>(0, (sum, p) => sum + p.gamesPlayed);
+    final totalPoints = _players.fold<int>(0, (sum, p) => sum + p.totalPoints);
+    final totalFouls = _players.fold<int>(0, (sum, p) => sum + p.totalFouls);
+    final highestRun = _players.fold<int>(0, (max, p) => p.highestRun > max ? p.highestRun : max);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: highlight ? Colors.white.withOpacity(0.05) : null,
-        border: const Border(bottom: BorderSide(color: Color(0xFF1F2937))),
+        color: SteampunkTheme.mahoganyLight,
+        border: Border.all(color: SteampunkTheme.brassDark, width: 2),
+        borderRadius: BorderRadius.circular(4),
+        boxShadow: [
+          BoxShadow(color: Colors.black54, blurRadius: 8, offset: Offset(2, 2)),
+        ],
       ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.insights, color: SteampunkTheme.brassPrimary),
+              const SizedBox(width: 8),
+              Text(
+                l10n.overallStatistics,
+                style: SteampunkTheme.themeData.textTheme.displaySmall?.copyWith(fontSize: 18),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatColumn(l10n.games, totalGames.toString(), Icons.sports_esports),
+              _buildStatColumn(l10n.points, totalPoints.toString(), Icons.stars),
+              _buildStatColumn(l10n.fouls, totalFouls.toString(), Icons.warning),
+              _buildStatColumn(l10n.bestRun, highestRun.toString(), Icons.trending_up),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatColumn(String label, String value, IconData icon) {
+    final theme = SteampunkTheme.themeData;
+    return Column(
+      children: [
+        Icon(icon, color: SteampunkTheme.brassBright, size: 24),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: theme.textTheme.displaySmall?.copyWith(fontSize: 24, color: SteampunkTheme.amberGlow),
+        ),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlayerCard(Player player, int rank) {
+    final theme = SteampunkTheme.themeData;
+    return Container( // Replaced Card with Container for custom border
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black45,
+        border: Border.all(color: SteampunkTheme.brassDark, width: 1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: ExpansionTile(
+        iconColor: SteampunkTheme.amberGlow,
+        leading: CircleAvatar(
+          backgroundColor: rank <= 3 ? SteampunkTheme.amberGlow : SteampunkTheme.brassDark,
+          foregroundColor: Colors.black,
+          child: Text(
+            '#$rank',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        title: Text(player.name, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+        subtitle: Text(
+          '${player.gamesPlayed} games | ${player.winRate.toStringAsFixed(1)}% Win',
+          style: theme.textTheme.bodySmall,
+        ),
+
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildStatRow('Games Played', player.gamesPlayed.toString()),
+                _buildStatRow('Games Won', '${player.gamesWon} (${player.winRate.toStringAsFixed(1)}%)'),
+                const Divider(),
+                _buildStatRow('Total Points', player.totalPoints.toString()),
+                _buildStatRow('Avg Points/Game', player.averagePointsPerGame.toStringAsFixed(1)),
+                _buildStatRow('Highest Run', player.highestRun.toString()),
+                const Divider(),
+                _buildStatRow('Total Innings', player.totalInnings.toString()),
+                _buildStatRow('Avg Innings/Game', player.averageInningsPerGame.toStringAsFixed(1)),
+                const Divider(),
+                _buildStatRow('Total Fouls', player.totalFouls.toString()),
+                _buildStatRow('Avg Fouls/Game', player.averageFoulsPerGame.toStringAsFixed(1)),
+                _buildStatRow('Total Saves', player.totalSaves.toString()),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(child: Text(p1, style: TextStyle(color: highlight ? const Color(0xFF22C55E) : Colors.white, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'monospace'))),
-          Text(label.toUpperCase(), style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
-          Expanded(child: Text(p2, textAlign: TextAlign.right, style: TextStyle(color: highlight ? const Color(0xFF3B82F6) : Colors.white, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'monospace'))),
+          Text(
+            label,
+            style: TextStyle(color: Colors.grey[700]),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
         ],
       ),
     );

@@ -1,6 +1,6 @@
 {
-    "name": "fortune142_flutter",
-    "short_name": "fortune142_flutter",
+    "name": "fortune142",
+    "short_name": "fortune142",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

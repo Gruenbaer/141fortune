@@ -1,97 +1,103 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'providers/game_provider.dart';
-import 'screens/match_screen.dart';
-import 'screens/match_setup_screen.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'models/achievement_manager.dart';
+import 'screens/home_screen.dart';
+import 'services/settings_service.dart';
+import 'models/game_settings.dart';
+import 'l10n/app_localizations.dart';
+import 'l10n/app_localizations.dart';
+import 'theme/steampunk_theme.dart';
 
 void main() {
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => GameProvider()),
-      ],
-      child: const Fortune141App(),
-    ),
-  );
+  runApp(const MyApp());
 }
 
-class Fortune141App extends StatelessWidget {
-  const Fortune141App({super.key});
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Fortune 142',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.green,
-        scaffoldBackgroundColor: const Color(0xFF0F172A),
-        textTheme: GoogleFonts.outfitTextTheme(
-          ThemeData.dark().textTheme,
-        ),
-        useMaterial3: true,
-      ),
-      home: const HomeScreen(),
-    );
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final _settingsService = SettingsService();
+  late final ValueNotifier<GameSettings> _settingsNotifier;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _settingsNotifier = ValueNotifier(GameSettings());
+    _loadSettings();
   }
-}
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  Future<void> _loadSettings() async {
+    final settings = await _settingsService.loadSettings();
+    _settingsNotifier.value = settings;
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  void _updateSettings(GameSettings newSettings) {
+    _settingsNotifier.value = newSettings;
+    _settingsService.saveSettings(newSettings);
+  }
+
+  @override
+  void dispose() {
+    _settingsNotifier.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<GameProvider>(context);
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+    if (_isLoading) {
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(
+              color: Colors.green[700],
+            ),
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'FORTUNE 14/2',
-              style: TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 4,
-                color: Colors.white,
-              ),
-            ),
-            const Text(
-              '14.1 Continuous Scoring',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.green,
-                letterSpacing: 2,
-              ),
-            ),
-            const SizedBox(height: 60),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MatchSetupScreen()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              ),
-              child: Text(provider.t('newGame').toUpperCase(), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            ),
+      );
+    }
+
+    return ValueListenableBuilder<GameSettings>(
+      valueListenable: _settingsNotifier,
+      builder: (context, settings, _) {
+        return MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => AchievementManager()),
+            Provider<GameSettings>.value(value: settings),
+            Provider<Function(GameSettings)>.value(value: _updateSettings),
           ],
-        ),
-      ),
+          child: MaterialApp(
+            title: 'Fortune 14/2',
+            debugShowCheckedModeBanner: false,
+            
+            // Localization
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: Locale(settings.languageCode),
+            
+            // Theme
+            // Theme
+            theme: SteampunkTheme.themeData,
+            darkTheme: SteampunkTheme.themeData,
+            themeMode: ThemeMode.dark,
+            
+            home: const HomeScreen(),
+          ),
+        );
+      },
     );
   }
 }

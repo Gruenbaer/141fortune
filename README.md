@@ -1,4 +1,4 @@
-# fortune142_flutter
+# fortune142
 
 A new Flutter project.
 

@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+build_*/
+build/
+build_WKL-22_Dez-22-073830-2025_conflict_current/
