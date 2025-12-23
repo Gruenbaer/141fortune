@@ -321,7 +321,7 @@ class _GameScreenState extends State<GameScreen> {
                 }
               ),
               title: Text(
-                'Fortune 14/2',
+                '14.1 Fortune',
                 style: SteampunkTheme.themeData.textTheme.displaySmall,
               ),
               centerTitle: true,
@@ -382,7 +382,7 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                     child: Center(
                       child: Text(
-                        'Fortune 14/2',
+                        '14.1 Fortune',
                         style: SteampunkTheme.themeData.textTheme.displayMedium,
                       ),
                     ),

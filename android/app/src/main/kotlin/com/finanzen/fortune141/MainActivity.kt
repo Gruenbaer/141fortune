@@ -1,4 +1,4 @@
-package com.finanzen.fortune142
+package com.finanzen.fortune141
 
 import io.flutter.embedding.android.FlutterActivity
 

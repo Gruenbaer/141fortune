@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="fortune142"
+        android:label="14.1 Fortune"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

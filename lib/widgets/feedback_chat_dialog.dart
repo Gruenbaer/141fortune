@@ -53,7 +53,7 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
         model: 'gemini-1.5-flash',
         apiKey: kGeminiApiKey,
         systemInstruction: Content.system(
-          "Du bist der QA-Assistent für die 'Fortune 14/2' Pool-Scoring-App. "
+          "Du bist der QA-Assistent für die '14.1 Fortune' Pool-Scoring-App. "
           "Deine Rolle ist es AUSSCHLIESSLICH, Benutzern zu helfen, Fehler zu melden oder Funktionen vorzuschlagen. "
           "1. DISKUTIERE das Problem oder die Feature-Anfrage gründlich mit dem Benutzer. Stelle klärende Fragen. "
           "2. FINDE GEMEINSAM eine Lösung oder einen klaren Plan für die Umsetzung. "
@@ -187,7 +187,7 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
       // Compile history
       final history = _messages.map((m) => "${m.isUser ? _userName ?? 'Benutzer' : 'Assistent'}: ${m.text}").join("\n\n");
       
-      final String subject = "Fortune 14/2 Feedback von ${_userName ?? 'Unbekannt'}: ${_feedbackType ?? 'Allgemein'}";
+      final String subject = "14.1 Fortune Feedback von ${_userName ?? 'Unbekannt'}: ${_feedbackType ?? 'Allgemein'}";
       final String body = 
         "═══════════════════════════════════════════════════════════\n"
         "FEEDBACK-BERICHT\n"
@@ -214,7 +214,7 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
       
       // Create message
       final message = Message()
-        ..from = Address(kSmtpUsername, 'Fortune 14/2 App')
+        ..from = Address(kSmtpUsername, '14.1 Fortune App')
         ..recipients.add(kFeedbackRecipient)
         ..subject = subject
         ..text = body;

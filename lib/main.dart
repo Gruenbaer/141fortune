@@ -79,7 +79,7 @@ class _MyAppState extends State<MyApp> {
           ],
           child: MaterialApp(
             navigatorKey: navigatorKey, // CRITIAL: Key for overlays
-            title: 'Fortune 14/2',
+            title: '14.1 Fortune',
             debugShowCheckedModeBanner: false,
             
             // Localization
