@@ -347,12 +347,27 @@ class _GameScreenState extends State<GameScreen> {
                     final updateSettings = Provider.of<Function(GameSettings)>(context, listen: false);
                     final currentSettings = Provider.of<GameSettings>(context, listen: false);
                     
+                    // Create a Settings object that reflects the CURRENT game state
+                    // This ensures the menu shows real names/scores, not defaults
+                    final activeGameSettings = currentSettings.copyWith(
+                      player1Name: gameState.players[0].name,
+                      player2Name: gameState.players[1].name,
+                      raceToScore: gameState.raceToScore,
+                      threeFoulRuleEnabled: gameState.foulTracker.threeFoulRuleEnabled,
+                    );
+
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => SettingsScreen(
-                          currentSettings: currentSettings,
-                          onSettingsChanged: updateSettings,
+                          currentSettings: activeGameSettings,
+                          onSettingsChanged: (newSettings) {
+                            // 1. Update Global Settings (Persistence)
+                            updateSettings(newSettings);
+                            
+                            // 2. Update Active Game State (In-Game)
+                            gameState.updateSettings(newSettings);
+                          },
                         ),
                       ),
                     );
@@ -539,11 +554,8 @@ class _GameScreenState extends State<GameScreen> {
                               Expanded(
                                 child: SteampunkButton(
                                   label: gameState.foulMode == FoulMode.none 
-                                      ? 'NO FOUL' 
-                                      : (gameState.foulMode == FoulMode.normal ? 'FOUL -1' : 'BREAK FOUL -2'),
-                                  icon: gameState.foulMode == FoulMode.none 
-                                      ? Icons.flag_outlined 
-                                      : (gameState.foulMode == FoulMode.normal ? Icons.flag : Icons.warning_amber_rounded),
+                                      ? 'No Foul' 
+                                      : (gameState.foulMode == FoulMode.normal ? 'Foul -1' : 'Break Foul -2'),
                                   textColor: gameState.foulMode == FoulMode.none
                                       ? null // Default color
                                       : (gameState.foulMode == FoulMode.normal 

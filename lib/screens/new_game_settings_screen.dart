@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/player_service.dart';
 import '../models/game_settings.dart';
 import '../l10n/app_localizations.dart';
@@ -332,12 +333,15 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                       
                       return TextField(
                         controller: controller,
+                        maxLength: 30,
+                        maxLengthEnforcement: MaxLengthEnforcement.enforced,
                         focusNode: focusNode,
                         textCapitalization: TextCapitalization.words,
                         decoration: InputDecoration(
                           labelText: 'Player 1',
                           hintText: 'Enter or select player',
                           border: const OutlineInputBorder(),
+                          counterText: '',  // Hide character counter
                           suffixIcon: _player1 != null
                               ? const Icon(Icons.check_circle, color: Colors.green)
                               : (controller.text.trim().isNotEmpty
@@ -405,12 +409,15 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                       
                       return TextField(
                         controller: controller,
+                        maxLength: 30,
+                        maxLengthEnforcement: MaxLengthEnforcement.enforced,
                         focusNode: focusNode,
                         textCapitalization: TextCapitalization.words,
                         decoration: InputDecoration(
                           labelText: 'Player 2',
                           hintText: 'Enter or select player',
                           border: const OutlineInputBorder(),
+                          counterText: '',  // Hide character counter
                           suffixIcon: _player2 != null
                               ? const Icon(Icons.check_circle, color: Colors.green)
                               : (controller.text.trim().isNotEmpty

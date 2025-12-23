@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/player_service.dart';
 import 'player_profile_screen.dart';
 import '../l10n/app_localizations.dart';
@@ -39,6 +40,8 @@ class _PlayersScreenState extends State<PlayersScreen> {
         title: Text(AppLocalizations.of(context).createPlayer),
         content: TextField(
           controller: controller,
+          maxLength: 30,
+          maxLengthEnforcement: MaxLengthEnforcement.enforced,
           autofocus: true,
           decoration: InputDecoration(
             labelText: AppLocalizations.of(context).playerName,
@@ -119,6 +122,10 @@ class _PlayersScreenState extends State<PlayersScreen> {
     
     return Scaffold(
       appBar: AppBar(
+        leading: Builder(builder: (context) {
+             final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+             return isKeyboardOpen ? const SizedBox.shrink() : const BackButton();
+        }),
         title: Text(l10n.players),
         centerTitle: true,
       ),

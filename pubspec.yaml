@@ -28,6 +28,16 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.0
   flutter_launcher_icons: "^0.13.1"
+  flutter_native_splash: ^2.3.10
+
+flutter_native_splash:
+  color: "#2A1B0E"
+  image: assets/images/splash_steampunk.png
+  fullscreen: true
+  android_12:
+    image: assets/images/splash_steampunk.png
+    color: "#2A1B0E"
+    icon_background_color: "#2A1B0E"
 
 flutter:
   uses-material-design: true
@@ -46,3 +56,5 @@ flutter_icons:
   ios: true
   image_path: "assets/icon/app_icon.png"
   min_sdk_android: 21
+  adaptive_icon_background: "#2A1B0E"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/game_settings.dart';
 import '../services/settings_service.dart';
 import '../l10n/app_localizations.dart';
@@ -77,6 +78,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
+        leading: Builder(builder: (context) {
+             final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+             return isKeyboardOpen ? const SizedBox.shrink() : const BackButton();
+        }),
         title: Text(l10n.settings, style: theme.textTheme.displaySmall),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -301,26 +306,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showResetDataConfirmation() async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reset Everything?'),
-        content: const Text(
-          'This will permanently delete all:\n'
-          '• Unlocked Achievements\n'
-          '• Game History\n'
-          '• Saved Settings\n\n'
-          'This action cannot be undone.',
-        ),
+        title: Text(l10n.resetEverything),
+        content: Text(l10n.resetDataMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
              style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Reset All'),
+            child: Text(l10n.resetAll),
           ),
         ],
       ),
@@ -339,7 +339,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('All data has been reset.')),
+          SnackBar(content: Text(l10n.allDataReset)),
         );
       }
     }
@@ -354,6 +354,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Text(l10n.raceToScore),
         content: TextField(
           controller: controller,
+          maxLength: 50,
+          maxLengthEnforcement: MaxLengthEnforcement.enforced,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
             labelText: l10n.points,
@@ -396,6 +398,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Text(playerNumber == 1 ? l10n.player1 : l10n.player2),
         content: TextField(
           controller: controller,
+          maxLength: 30,
+          maxLengthEnforcement: MaxLengthEnforcement.enforced,
           decoration: InputDecoration(
             labelText: l10n.playerName,
             hintText: 'Enter player name',

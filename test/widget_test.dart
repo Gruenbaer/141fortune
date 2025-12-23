@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fortune142/models/game_state.dart';
+import 'package:fortune141/models/game_state.dart';
 
 void main() {
   testWidgets('App compiles without errors', (WidgetTester tester) async {

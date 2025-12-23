@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/player_service.dart';
 import '../models/achievement_manager.dart';
@@ -77,6 +78,8 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
         title: Text(l10n.editPlayer),
         content: TextField(
           controller: controller,
+          maxLength: 30,
+          maxLengthEnforcement: MaxLengthEnforcement.enforced,
           autofocus: true,
           decoration: InputDecoration(
             labelText: l10n.playerName,

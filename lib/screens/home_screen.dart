@@ -76,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 create: (_) => GameState(
                   raceToScore: settings.raceToScore,
                   playerNames: [settings.player1Name, settings.player2Name],
+                  playerHandicaps: [settings.player1Handicap, settings.player2Handicap],
                   threeFoulRuleEnabled: settings.threeFoulRuleEnabled,
                   achievementManager: Provider.of<AchievementManager>(context, listen: false),
                 ),

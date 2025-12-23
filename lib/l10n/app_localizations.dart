@@ -146,6 +146,10 @@ class AppLocalizations {
       'resetGame': 'Spiel zurücksetzen',
       'resetGameMessage': 'Möchten Sie das Spiel wirklich zurücksetzen?',
       'reset': 'Zurücksetzen',
+      'resetEverything': 'Alles zurücksetzen?',
+      'resetAll': 'Alles zurücksetzen',
+      'resetDataMessage': 'Dies wird dauerhaft löschen:\n• Freigeschaltete Erfolge\n• Spielverlauf\n• Gespeicherte Einstellungen\n\nDiese Aktion kann nicht rückgängig gemacht werden.',
+      'allDataReset': 'Alle Daten wurden zurückgesetzt.',
       
       // Game History
       'gameHistory': 'Spielverlauf',
@@ -294,6 +298,10 @@ class AppLocalizations {
       'resetGame': 'Reset Game',
       'resetGameMessage': 'Are you sure you want to reset the game?',
       'reset': 'Reset',
+      'resetEverything': 'Reset Everything?',
+      'resetAll': 'Reset All',
+      'resetDataMessage': 'This will permanently delete all:\n• Unlocked Achievements\n• Game History\n• Saved Settings\n\nThis action cannot be undone.',
+      'allDataReset': 'All data has been reset.',
       
       // Game History
       'gameHistory': 'Game History',
@@ -431,6 +439,10 @@ class AppLocalizations {
   
   String get exit => translate('exit');
   String get exitGameTitle => translate('exitGameTitle');
+  String get resetEverything => translate('resetEverything');
+  String get resetAll => translate('resetAll');
+  String get resetDataMessage => translate('resetDataMessage');
+  String get allDataReset => translate('allDataReset');
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

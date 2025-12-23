@@ -7,7 +7,7 @@ import '../data/messages.dart';
 enum FoulMode { none, normal, severe }
 
 class GameState extends ChangeNotifier {
-  final int raceToScore;
+  int raceToScore;
   late List<Player> players;
   late FoulTracker foulTracker;
   late AchievementManager? achievementManager;
@@ -50,15 +50,61 @@ class GameState extends ChangeNotifier {
   GameState({
     required this.raceToScore,
     required List<String> playerNames,
+    List<int> playerHandicaps = const [0, 0],
     bool threeFoulRuleEnabled = true,
     this.achievementManager,
   }) {
-    players = playerNames
-        .map((name) => Player(name: name, isActive: false))
-        .toList();
+    players = List.generate(playerNames.length, (index) {
+      final handicap = (index < playerHandicaps.length) ? playerHandicaps[index] : 0;
+      return Player(name: playerNames[index], isActive: false, score: handicap);
+    });
+
     players[0].isActive = true;
     foulTracker = FoulTracker(threeFoulRuleEnabled: threeFoulRuleEnabled);
     _resetRack();
+  }
+
+  // Update settings mid-game
+  void updateSettings(dynamic settings) {
+    bool somethingChanged = false;
+    
+    // Update Race to Score
+    if (raceToScore != settings.raceToScore) {
+      raceToScore = settings.raceToScore;
+      somethingChanged = true;
+      _logAction('Race to Score changed to $raceToScore');
+    }
+
+    // Update 3-Foul Rule
+    if (foulTracker.threeFoulRuleEnabled != settings.threeFoulRuleEnabled) {
+      foulTracker.threeFoulRuleEnabled = settings.threeFoulRuleEnabled;
+      somethingChanged = true;
+      _logAction('3-Foul Rule ${settings.threeFoulRuleEnabled ? "Enabled" : "Disabled"}');
+    }
+
+    // Update Player Names (if changed)
+    // We assume settings.player1Name maps to players[0]
+    if (players[0].name != settings.player1Name) {
+      // We can't change final name field in Player, so we create a copy? 
+      // Actually Player.name is final. Converting Player.name to non-final or using copyWith.
+      // GameState expects mutable players list.
+      // Let's replace the entry with a copyWith
+       players[0] = players[0].copyWith(name: settings.player1Name);
+       somethingChanged = true;
+       _logAction('Player 1 renamed to ${settings.player1Name}');
+    }
+
+    if (players[1].name != settings.player2Name) {
+       players[1] = players[1].copyWith(name: settings.player2Name);
+       somethingChanged = true;
+       _logAction('Player 2 renamed to ${settings.player2Name}');
+    }
+    
+    // Check win condition if score limit was lowered
+    if (somethingChanged) {
+      _checkWinCondition();
+      notifyListeners();
+    }
   }
 
   void setShowBreakFoulHint(bool show) {
