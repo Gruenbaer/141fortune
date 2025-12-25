@@ -18,6 +18,7 @@ import 'details_screen.dart';
 import '../theme/steampunk_theme.dart';
 import '../widgets/steampunk_widgets.dart';
 import '../widgets/victory_splash.dart';
+import 'new_game_settings_screen.dart';
 import 'package:google_fonts/google_fonts.dart'; // For Arial alternative (Lato/Roboto) if Arial not available, but user said Arial.
 import '../services/player_service.dart' as stats; // For stats fetching
 
@@ -307,19 +308,8 @@ class _GameScreenState extends State<GameScreen> {
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
-              leading: Builder(
-                builder: (context) {
-                  // Hide hamburger if keyboard is open to avoid overlay/clutter
-                  final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
-                  if (isKeyboardOpen) return const SizedBox.shrink();
-                  
-                  return IconButton(
-                    icon: const Icon(Icons.menu),
-                    color: SteampunkTheme.brassPrimary,
-                    onPressed: () => Scaffold.of(context).openDrawer(),
-                  );
-                }
-              ),
+              // Hamburger menu removed per user request
+              leading: const SizedBox.shrink(),
               title: Text(
                 '14.1 Fortune',
                 style: SteampunkTheme.themeData.textTheme.displaySmall,
@@ -429,6 +419,24 @@ class _GameScreenState extends State<GameScreen> {
                     if (hasWinner && !_isCompletedSaved) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         _saveCompletedGame(gameState);
+                        // Navigate to victory screen
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (context) => VictorySplash(
+                              winner: gameState.winner!,
+                              loser: gameState.players.firstWhere((p) => p != gameState.winner),
+                              raceToScore: gameState.raceToScore,
+                              matchLog: gameState.matchLog,
+                              onNewGame: () {
+                                // Pop all routes to return to home screen
+                                Navigator.of(context).popUntil((route) => route.isFirst);
+                              },
+                              onExit: () {
+                                Navigator.of(context).popUntil((route) => route.isFirst);
+                              },
+                            ),
+                          ),
+                        );
                       });
                     }
 
@@ -555,7 +563,7 @@ class _GameScreenState extends State<GameScreen> {
                                 child: SteampunkButton(
                                   label: gameState.foulMode == FoulMode.none 
                                       ? 'No Foul' 
-                                      : (gameState.foulMode == FoulMode.normal ? 'Foul -1' : 'Break Foul -2'),
+                                      : (gameState.foulMode == FoulMode.normal ? 'Foul\n-1' : 'Break Foul\n-2'),
                                   textColor: gameState.foulMode == FoulMode.none
                                       ? null // Default color
                                       : (gameState.foulMode == FoulMode.normal 
@@ -619,20 +627,6 @@ class _GameScreenState extends State<GameScreen> {
             },
           ),
           
-        // Victory Splash Overlay
-        if (gameState.gameOver && gameState.winner != null)
-          VictorySplash(
-            winner: gameState.winner!,
-            loser: gameState.players.firstWhere((p) => p != gameState.winner),
-            raceToScore: gameState.raceToScore,
-            matchLog: gameState.matchLog, // Pass the log
-            onNewGame: () {
-              gameState.resetGame();
-            },
-            onExit: () {
-              Navigator.of(context).pop();
-            },
-          ),
       ],
     ); // close Stack - this is the return of build()
   }

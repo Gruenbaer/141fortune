@@ -79,7 +79,7 @@ class _SteampunkButtonState extends State<SteampunkButton> with SingleTickerProv
         child: Container(
           width: double.infinity,
           margin: const EdgeInsets.symmetric(vertical: 8),
-          constraints: const BoxConstraints(maxWidth: 400, minHeight: 70),
+          constraints: const BoxConstraints(maxWidth: 400, minHeight: 80, maxHeight: 80),
           child: CustomPaint(
             painter: BrassFramePainter(),
             child: Container(
@@ -119,14 +119,14 @@ class _SteampunkButtonState extends State<SteampunkButton> with SingleTickerProv
                     ),
                     const SizedBox(width: 12),
                   ],
-                  Expanded(
+                  Flexible(
                     child: Text(
                       widget.label.toUpperCase(),
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: widget.textColor ?? SteampunkTheme.leatherDark,
-                        letterSpacing: 1.2,
+                        letterSpacing: 1.0,
                         fontWeight: FontWeight.w800,
-                        fontSize: 15,
+                        fontSize: 14,
                         shadows: [
                           // Embossed effect
                           Shadow(
@@ -142,8 +142,8 @@ class _SteampunkButtonState extends State<SteampunkButton> with SingleTickerProv
                         ],
                       ),
                       textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                      overflow: TextOverflow.visible,
                     ),
                   ),
                 ],

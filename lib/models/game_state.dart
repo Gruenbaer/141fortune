@@ -305,21 +305,35 @@ class GameState extends ChangeNotifier {
 
     // RE-RACK LOGIC (User Request: sinking down to 1 ball triggers re-rack)
     // "clicking the one means a rereack. activate all balls"
+    bool isReRack = false;
     if (newBallCount == 1 && points > 0 && currentFoulMode == FoulMode.none) {
       _updateRackCount(15); // Reset to full rack (14 + 1)
       _logAction('${currentPlayer.name}: Re-rack (14.1 Continuous)');
+      isReRack = true;
     }
 
     bool turnEnded = false;
 
-    // Check for Turn Switch on 0 points (Miss/Safe via Ball Tap)
+    // TURN SWITCHING LOGIC per rules:
+    // "Automatischer Spielerwechsel: Nach jedem Ball (außer Ball 1 und Weiße)"
+    // Turn switches after EVERY ball potted, EXCEPT:
+    // - Re-rack scenarios (Ball 1) - player continues
+    // - Double Sack (handled separately) - player continues
+    // - Fouls always end turn
     if (currentFoulMode == FoulMode.none) {
-      if (points <= 0) {
+      if (points > 0) {
+        // Player potted ball(s) - turn ENDS (rule: switch after every ball)
+        // Exception: Re-rack at Ball 1 - player continues
+        if (isReRack) {
+          turnEnded = false; // Player continues after re-rack
+        } else {
+          turnEnded = true; // Normal ball pot - switch turns
+        }
+      } else if (points <= 0) {
+        // Miss/Safe (0 points or negative)
         turnEnded = true; 
         _logAction('${currentPlayer.name}: Miss/Safe (0 pts)');
         currentPlayer.incrementSaves(); 
-      } else {
-        turnEnded = false; // Scored, continue.
       }
     } else {
       turnEnded = true; // Foul always ends turn
@@ -395,10 +409,16 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Helper to log actions
+  // Helper to log actions with inning tracking
   void _logAction(String action) {
-    lastAction = action;
-    matchLog.insert(0, action); // Newest first
+    // Get current player's inning number
+    int currentInning = currentPlayer.currentInning;
+    
+    // Prefix with inning marker: "I{inning} | {action}"
+    String logEntry = 'I$currentInning | $action';
+    
+    lastAction = logEntry;
+    matchLog.insert(0, logEntry); // Newest first
     notifyListeners();
   }
 
