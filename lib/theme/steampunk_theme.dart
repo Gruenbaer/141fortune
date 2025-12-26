@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'fortune_theme.dart';
+
 class SteampunkTheme {
   // Palette
   static const Color mahoganyDark = Color(0xFF2D160E);   // Deep wood for background
@@ -14,11 +16,27 @@ class SteampunkTheme {
   static const Color amberGlow = Color(0xFFFFA000);      // Active/Highlight glow
 
   static ThemeData get themeData {
+    final colors = const FortuneColors(
+      themeId: 'steampunk',
+      backgroundMain: mahoganyDark,
+      backgroundCard: mahoganyLight,
+      primary: brassPrimary,
+      primaryDark: brassDark,
+      primaryBright: brassBright,
+      secondary: verdigris,
+      accent: amberGlow,
+      textMain: steamWhite,
+      textContrast: leatherDark,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       primaryColor: brassPrimary,
       scaffoldBackgroundColor: mahoganyDark,
+      
+      extensions: [colors],
+
       
       // Card Theme (Leather/Wood look)
       cardTheme: CardThemeData(

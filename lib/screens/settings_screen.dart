@@ -36,7 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = SteampunkTheme.themeData;
+    final theme = Theme.of(context);
     
     // Helper to build a control panel section
     Widget buildSectionHeader(String title, IconData icon) {
@@ -209,30 +209,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
               buildPanelTile(
                 child: Column(
                   children: [
-                    RadioListTile<bool>(
-                      title: Text(l10n.lightTheme, style: theme.textTheme.bodyMedium),
-                      subtitle: const Text('Classic (Disabled)'), // Hint it's disabled or ignored
-                      secondary: const Icon(Icons.light_mode, color: Colors.grey),
-                      value: false,
-                      groupValue: _settings.isDarkTheme,
-                      activeColor: SteampunkTheme.amberGlow,
+                    RadioListTile<String>(
+                      title: Text('Steampunk', style: theme.textTheme.bodyMedium),
+                      subtitle: const Text('Classic Brass & Wood'),
+                      secondary: const Icon(Icons.access_time_filled, color: Color(0xFFCDBE78)),
+                      value: 'steampunk',
+                      groupValue: _settings.themeId,
+                      activeColor: const Color(0xFFFFA000),
                       onChanged: (value) {
-                        // For now allow switching, but MainActivity forces Dark
                         setState(() {
-                          _settings = _settings.copyWith(isDarkTheme: value);
+                          _settings = _settings.copyWith(themeId: value);
                         });
                       },
                     ),
-                    RadioListTile<bool>(
-                      title: Text(l10n.darkTheme, style: theme.textTheme.bodyMedium),
-                      subtitle: const Text('Steampunk (Active)'),
-                      secondary: const Icon(Icons.dark_mode, color: SteampunkTheme.brassBright),
-                      value: true,
-                      groupValue: _settings.isDarkTheme,
-                      activeColor: SteampunkTheme.amberGlow,
+                    RadioListTile<String>(
+                      title: Text('Cyberpunk', style: theme.textTheme.bodyMedium),
+                      subtitle: const Text('Neon & Glitch'),
+                      secondary: const Icon(Icons.memory, color: Color(0xFF00F0FF)),
+                      value: 'cyberpunk',
+                      groupValue: _settings.themeId,
+                      activeColor: const Color(0xFF00F0FF),
                       onChanged: (value) {
                         setState(() {
-                          _settings = _settings.copyWith(isDarkTheme: value);
+                          _settings = _settings.copyWith(themeId: value);
                         });
                       },
                     ),

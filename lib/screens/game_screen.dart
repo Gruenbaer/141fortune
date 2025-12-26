@@ -16,8 +16,11 @@ import '../services/game_history_service.dart';
 import 'settings_screen.dart';
 import 'details_screen.dart';
 import '../theme/steampunk_theme.dart';
+import '../theme/fortune_theme.dart';
 import '../widgets/steampunk_widgets.dart';
 import '../widgets/victory_splash.dart';
+import '../widgets/game_clock.dart';
+import '../widgets/pause_overlay.dart';
 import 'new_game_settings_screen.dart';
 import 'package:google_fonts/google_fonts.dart'; // For Arial alternative (Lato/Roboto) if Arial not available, but user said Arial.
 import '../services/player_service.dart' as stats; // For stats fetching
@@ -218,6 +221,8 @@ class _GameScreenState extends State<GameScreen> {
   Widget build(BuildContext context) {
     // Listen to provider for Undo/Redo button state
     final gameState = Provider.of<GameState>(context);
+    final colors = FortuneColors.of(context);
+    final theme = Theme.of(context);
 
     // Helper functions for Drawer actions
     void showRestartConfirmation() {
@@ -314,13 +319,12 @@ class _GameScreenState extends State<GameScreen> {
                 child: Center(
                   child: Text(
                     'Straight Pool',
-                    style: GoogleFonts.rye(
-                      fontSize: 14,
-                      color: SteampunkTheme.brassPrimary,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: colors.primary,
                       fontWeight: FontWeight.bold,
                       shadows: [
-                        const Shadow(blurRadius: 3, color: Colors.black87, offset: Offset(1, 1)),
-                        const Shadow(blurRadius: 6, color: Colors.black54, offset: Offset(0, 0)),
+                        Shadow(blurRadius: 3, color: Colors.black87, offset: const Offset(1, 1)),
+                        Shadow(blurRadius: 6, color: colors.primary.withOpacity(0.5), offset: const Offset(0, 0)),
                       ],
                     ),
                   ),
@@ -329,7 +333,7 @@ class _GameScreenState extends State<GameScreen> {
               actions: [
                 IconButton(
                   icon: const Icon(Icons.analytics_outlined),
-                  color: SteampunkTheme.brassPrimary,
+                  color: colors.primary,
                   tooltip: 'Details',
                   onPressed: () {
                     Navigator.push(
@@ -342,7 +346,7 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.settings),
-                  color: SteampunkTheme.brassPrimary,
+                  color: colors.primary,
                   tooltip: 'Settings',
                   onPressed: () async {
                     final updateSettings = Provider.of<Function(GameSettings)>(context, listen: false);
@@ -376,13 +380,13 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.undo),
-                  color: SteampunkTheme.brassPrimary,
+                  color: colors.primary,
                   tooltip: 'Undo',
                   onPressed: gameState.canUndo ? gameState.undo : null,
                 ),
                 IconButton(
                   icon: const Icon(Icons.redo),
-                  color: SteampunkTheme.brassPrimary,
+                  color: colors.primary,
                   tooltip: 'Redo',
                   onPressed: gameState.canRedo ? gameState.redo : null,
                 ),
@@ -438,6 +442,7 @@ class _GameScreenState extends State<GameScreen> {
                               loser: gameState.players.firstWhere((p) => p != gameState.winner),
                               raceToScore: gameState.raceToScore,
                               matchLog: gameState.matchLog,
+                              elapsedDuration: gameState.elapsedDuration,
                               onNewGame: () {
                                 // Pop all routes to return to home screen
                                 Navigator.of(context).popUntil((route) => route.isFirst);
@@ -458,9 +463,8 @@ class _GameScreenState extends State<GameScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Text(
                             'Race to ${gameState.raceToScore}',
-                            style: GoogleFonts.rye(
-                              fontSize: 16,
-                              color: SteampunkTheme.brassPrimary,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: colors.primary,
                               fontWeight: FontWeight.bold,
                               shadows: [
                                 const Shadow(blurRadius: 2, color: Colors.black, offset: Offset(1, 1)),
@@ -471,9 +475,9 @@ class _GameScreenState extends State<GameScreen> {
                         // 1. Players & Scores Header
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: const BoxDecoration(
-                            color: SteampunkTheme.mahoganyDark,
-                            border: Border(bottom: BorderSide(color: SteampunkTheme.brassPrimary, width: 2)),
+                          decoration: BoxDecoration(
+                            color: colors.backgroundCard,
+                            border: Border(bottom: BorderSide(color: colors.primary, width: 2)),
                           ),
                           child: Row(
                             children: [
@@ -484,7 +488,7 @@ class _GameScreenState extends State<GameScreen> {
                               if (!gameState.gameStarted && gameState.matchLog.isEmpty)
                                 IconButton(
                                   icon: const Icon(Icons.swap_horiz, size: 28),
-                                  color: SteampunkTheme.amberGlow,
+                                  color: colors.accent,
                                   onPressed: gameState.swapStartingPlayer,
                                   tooltip: 'Swap Sides',
                                   padding: EdgeInsets.zero,
@@ -531,6 +535,12 @@ class _GameScreenState extends State<GameScreen> {
                             ),
                           ),
 
+                        // CLOCK
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                          child: GameClock(),
+                        ),
+
                         // 3. Score Sheet (Match Log) - Removed per user request
                         // It is now available in "Details" (Stats Icon) and Victory Screen.
 
@@ -538,7 +548,7 @@ class _GameScreenState extends State<GameScreen> {
                         if (gameState.lastAction != null)
                            Container(
                               width: double.infinity,
-                              color: SteampunkTheme.brassPrimary,
+                              color: colors.primary,
                               padding: const EdgeInsets.all(4),
                               child: Text(
                                 gameState.lastAction!.toUpperCase(),
@@ -557,10 +567,11 @@ class _GameScreenState extends State<GameScreen> {
                             alignment: Alignment.center,
                             children: [
                               // Decorative Gears behind the rack
-                              Opacity(
-                                opacity: 0.1,
-                                child: Image.asset('assets/images/ui/gears.png', fit: BoxFit.contain),
-                              ),
+                              if (colors.backgroundMain == SteampunkTheme.mahoganyDark)
+                                Opacity(
+                                  opacity: 0.1,
+                                  child: Image.asset('assets/images/ui/gears.png', fit: BoxFit.contain),
+                                ),
                               // The Rack
                               Center(
                                 child: Padding(
@@ -653,6 +664,8 @@ class _GameScreenState extends State<GameScreen> {
             },
           ),
           
+        // Pause Overlay
+        const PauseOverlay(),
       ],
     ); // close Stack - this is the return of build()
   }

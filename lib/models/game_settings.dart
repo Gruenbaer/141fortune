@@ -10,6 +10,7 @@ class GameSettings {
   bool soundEnabled;
   String languageCode;
   bool isDarkTheme;
+  String themeId;
 
   GameSettings({
     this.threeFoulRuleEnabled = true,
@@ -23,6 +24,7 @@ class GameSettings {
     this.soundEnabled = true,
     this.languageCode = 'de', // Default: German
     this.isDarkTheme = false, // Default: Light theme
+    this.themeId = 'steampunk',
   });
 
   Map<String, dynamic> toJson() => {
@@ -37,6 +39,7 @@ class GameSettings {
         'soundEnabled': soundEnabled,
         'languageCode': languageCode,
         'isDarkTheme': isDarkTheme,
+        'themeId': themeId,
       };
 
   factory GameSettings.fromJson(Map<String, dynamic> json) => GameSettings(
@@ -51,6 +54,7 @@ class GameSettings {
         soundEnabled: json['soundEnabled'] ?? true,
         languageCode: json['languageCode'] ?? 'de',
         isDarkTheme: json['isDarkTheme'] ?? false,
+        themeId: json['themeId'] ?? 'steampunk',
       );
 
   GameSettings copyWith({
@@ -65,6 +69,7 @@ class GameSettings {
     bool? soundEnabled,
     String? languageCode,
     bool? isDarkTheme,
+    String? themeId,
   }) {
     return GameSettings(
       threeFoulRuleEnabled: threeFoulRuleEnabled ?? this.threeFoulRuleEnabled,
@@ -78,6 +83,7 @@ class GameSettings {
       soundEnabled: soundEnabled ?? this.soundEnabled,
       languageCode: languageCode ?? this.languageCode,
       isDarkTheme: isDarkTheme ?? this.isDarkTheme,
+      themeId: themeId ?? this.themeId,
     );
   }
 }

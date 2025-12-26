@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'player.dart';
 import 'foul_tracker.dart';
 import 'achievement_manager.dart';
@@ -46,6 +47,68 @@ class GameState extends ChangeNotifier {
   // Available if explicitly in sequence OR if game hasn't really started (log empty)
   bool get canBreakFoul => inBreakSequence || matchLog.isEmpty;
   bool get canRedo => _redoStack.isNotEmpty;
+
+  // Game Clock
+  final Stopwatch _gameTimer = Stopwatch();
+  Duration _savedDuration = Duration.zero; // For persistence
+  
+  Timer? _ticker;
+  bool _isPaused = false;
+  
+  bool get isPaused => _isPaused;
+  Duration get elapsedDuration => _savedDuration + _gameTimer.elapsed;
+
+  void startGameTimer() {
+    if (!gameStarted) return;
+    if (!_gameTimer.isRunning && !_isPaused) {
+      _gameTimer.start();
+      _startTicker();
+    }
+  }
+
+  void pauseGame() {
+    if (_gameTimer.isRunning) {
+      _gameTimer.stop();
+      _isPaused = true;
+      _stopTicker();
+      notifyListeners();
+    }
+  }
+
+  void resumeGame() {
+    if (_isPaused) {
+      _gameTimer.start();
+      _isPaused = false;
+      _startTicker();
+      notifyListeners();
+    }
+  }
+
+  void togglePause() {
+    if (_isPaused) {
+      resumeGame();
+    } else {
+      pauseGame();
+    }
+  }
+
+  void _startTicker() {
+    _ticker?.cancel();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
+      notifyListeners(); // Update UI every second
+    });
+  }
+
+  void _stopTicker() {
+    _ticker?.cancel();
+    _ticker = null;
+  }
+  
+  @override
+  void dispose() {
+    _stopTicker();
+    super.dispose();
+  }
 
   GameState({
     required this.raceToScore,
@@ -221,7 +284,10 @@ class GameState extends ChangeNotifier {
 
   void onBallTapped(int ballNumber) {
     _pushState();
-    if (!gameStarted) gameStarted = true;
+    if (!gameStarted) {
+      gameStarted = true;
+      startGameTimer();
+    }
 
     // Capture foul mode before reset
     final currentFoulMode = foulMode;
@@ -388,7 +454,10 @@ class GameState extends ChangeNotifier {
 
   void onDoubleSack() {
     _pushState();
-    if (!gameStarted) gameStarted = true;
+    if (!gameStarted) {
+      gameStarted = true;
+      startGameTimer();
+    }
 
     final currentFoulMode = foulMode;
     foulMode = FoulMode.none;
@@ -519,6 +588,16 @@ class GameState extends ChangeNotifier {
   void loadFromJson(Map<String, dynamic> json) {
      final snapshot = GameSnapshot.fromJson(json);
      snapshot.restore(this);
+     
+     // Resume timer if game was in progress and we just loaded it
+     // But wait! snapshot restores 'gameStarted'. 
+     // Should we auto-resume timer? 
+     // Probably yes, but let's pause it initially to be safe? 
+     // Or effectively "resume" the stopwatch if it was running?
+     // Since Stopwatch doesn't persist, we rely on 'elapsed' if we persisted it.
+     // Current implementation doesn't persist 'elapsed' yet.
+     // Let's add that to GameSnapshot first.
+     notifyListeners();
   }
 }
 
@@ -540,6 +619,7 @@ class GameSnapshot implements UndoState {
   final List<String> matchLog;
   final String breakFoulHintMessage;
   final bool inBreakSequence; // Persistence
+  final int elapsedDurationInSeconds; // Persistence
 
   GameSnapshot.fromState(GameState state)
       : players = state.players.map((p) => p.copyWith()).toList(),
@@ -554,7 +634,8 @@ class GameSnapshot implements UndoState {
         // foulTrackerSnapshot = FoulTrackerSnapshot(state.foulTracker.consecutiveNormalFouls), // REMOVED
         matchLog = List.from(state.matchLog),
         breakFoulHintMessage = state.breakFoulHintMessage,
-        inBreakSequence = state.inBreakSequence;
+        inBreakSequence = state.inBreakSequence,
+        elapsedDurationInSeconds = state.elapsedDuration.inSeconds;
         
   GameSnapshot.fromJson(Map<String, dynamic> json)
       : players = (json['players'] as List).map((e) => Player.fromJson(e)).toList(),
@@ -572,7 +653,8 @@ class GameSnapshot implements UndoState {
         // foulTrackerSnapshot = FoulTrackerSnapshot.fromJson(json['foulTrackerSnapshot']), // REMOVED
         matchLog = List<String>.from(json['matchLog'] as List),
         breakFoulHintMessage = json['breakFoulHintMessage'] as String,
-        inBreakSequence = json['inBreakSequence'] as bool? ?? true; // Default to true if missing
+        inBreakSequence = json['inBreakSequence'] as bool? ?? true,
+        elapsedDurationInSeconds = json['elapsedDurationInSeconds'] as int? ?? 0;
 
   Map<String, dynamic> toJson() => {
     'players': players.map((p) => p.toJson()).toList(),
@@ -588,6 +670,7 @@ class GameSnapshot implements UndoState {
     'matchLog': matchLog,
     'breakFoulHintMessage': breakFoulHintMessage,
     'inBreakSequence': inBreakSequence,
+    'elapsedDurationInSeconds': elapsedDurationInSeconds,
   };
 
   @override
@@ -608,6 +691,19 @@ class GameSnapshot implements UndoState {
     state.foulMode = foulMode;
     state.matchLog = List.from(matchLog);
     state.breakFoulHintMessage = breakFoulHintMessage;
-    state.notifyListeners();
+    
+    // Restore Timer
+    state._savedDuration = Duration(seconds: elapsedDurationInSeconds);
+    state._gameTimer.reset(); // Reset active stopwatch
+    // If game was running, should we auto-resume? 
+    // Usually safe to default to paused or resume if we know it was running?
+    // let's leave it paused for safety, user can resume.
+    // actually, if we are loading from JSON (app restart), pausing is good.
+    // if we are undoing, we probably want to keep current running state?
+    // Undo logic might be tricky with timer. 
+    // actually, if we are loading from JSON (app restart), pausing is good.
+    // if we are undoing, we probably want to keep current running state?
+    // Undo logic might be tricky with timer. 
+    // Let's just restore the accumulated time.
   }
 }
