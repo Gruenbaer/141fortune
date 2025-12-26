@@ -265,6 +265,12 @@ class GameState extends ChangeNotifier {
         currentPlayer.incrementSaves();
       }
 
+      // RE-RACK check for Safe Mode (since we return early)
+      if (newBallCount == 1) {
+        _updateRackCount(15);
+        _logAction('${currentPlayer.name}: Re-rack (Auto/Safe)');
+      }
+
       _checkWinCondition();
       _switchPlayer(); 
       notifyListeners();
@@ -303,12 +309,24 @@ class GameState extends ChangeNotifier {
     // Update Rack State
     _updateRackCount(newBallCount);
 
-    // RE-RACK LOGIC (User Request: sinking down to 1 ball triggers re-rack)
-    // "clicking the one means a rereack. activate all balls"
+    // RE-RACK LOGIC (User Request: "If there is only one ball, a rerack is done.")
+    // Whether we arrived here by Pot, Foul, or Safe -> If 1 ball remains, we rack the other 14.
     bool isReRack = false;
-    if (newBallCount == 1 && points > 0 && currentFoulMode == FoulMode.none) {
+    
+    if (newBallCount == 1) {
       _updateRackCount(15); // Reset to full rack (14 + 1)
-      _logAction('${currentPlayer.name}: Re-rack (14.1 Continuous)');
+      
+      // Determine Log Message
+      String reRackType;
+      if (points > 0 && currentFoulMode == FoulMode.none) {
+         reRackType = "14.1 Continuous";
+      } else if (currentFoulMode != FoulMode.none) {
+         reRackType = "After Foul";
+      } else {
+         reRackType = "Auto/Safe";
+      }
+      
+      _logAction('${currentPlayer.name}: Re-rack ($reRackType)');
       isReRack = true;
     }
 
@@ -547,7 +565,10 @@ class GameSnapshot implements UndoState {
         winnerName = json['winnerName'] as String?,
         lastAction = json['lastAction'] as String?,
         showThreeFoulPopup = json['showThreeFoulPopup'] as bool,
-        foulMode = FoulMode.values[json['foulMode'] as int],
+        foulMode = (json['foulMode'] as int?) != null && 
+                   (json['foulMode'] as int) < FoulMode.values.length 
+            ? FoulMode.values[json['foulMode'] as int] 
+            : FoulMode.none,
         // foulTrackerSnapshot = FoulTrackerSnapshot.fromJson(json['foulTrackerSnapshot']), // REMOVED
         matchLog = List<String>.from(json['matchLog'] as List),
         breakFoulHintMessage = json['breakFoulHintMessage'] as String,

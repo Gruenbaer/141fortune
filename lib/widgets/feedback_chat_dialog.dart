@@ -46,6 +46,7 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
   int _messageCount = 0;
   static const _maxMessages = 15;
   DateTime? _sessionStartTime;
+  bool _feedbackSent = false;
   static const _sessionTimeout = Duration(minutes: 5);
 
   @override
@@ -341,7 +342,10 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
       
       await send(message, smtpServer);
       
-      setState(() => _isTyping = false);
+      setState(() {
+        _isTyping = false;
+        _feedbackSent = true;
+      });
       _addBotMessage("✅ Feedback erfolgreich gesendet! Vielen Dank, ${_userName ?? 'Unbekannt'}!");
       
       Future.delayed(const Duration(seconds: 3), () {
@@ -521,11 +525,11 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
                       side: const BorderSide(color: brassDark, width: 3),
                     ),
                   ),
-                  onPressed: _userName != null
+                  onPressed: (_userName != null && !_isTyping && !_feedbackSent)
                     ? () => _sendEmail(sendToUser: _userEmail != null)
                     : null,
                   child: Text(
-                    'SEND REPORT',
+                    _isTyping ? 'SENDING...' : (_feedbackSent ? 'THANKS!' : 'SEND REPORT'),
                     style: GoogleFonts.rye(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,

@@ -677,13 +677,9 @@ class _GameScreenState extends State<GameScreen> {
 
     // Helper to check if ball can be tapped (rule enforcement)
     bool canTapBall(int ballNumber) {
-      // Rule: Cannot play foul or safe leaving only 1 ball
-      if (gameState.activeBalls.length == 1) {
-        // Only 1 ball left - check if foul or safe mode is active
-        if (gameState.foulMode != FoulMode.none || gameState.isSafeMode) {
-          return false; // Disable the last ball
-        }
-      }
+      // Logic Simplified: We allow tapping even if it's the last ball.
+      // This is necessary to register Fouls/Safes without pocketing the ball (Ball Count remains 1).
+      // The GameState.onBallTapped logic handles the "0 points" calculation correctly.
       return true;
     }
 

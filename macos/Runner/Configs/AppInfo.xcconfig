@@ -8,7 +8,7 @@
 PRODUCT_NAME = fortune142
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.finanzen.fortune142
+PRODUCT_BUNDLE_IDENTIFIER = com.knthlz.fortune142
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2025 com.finanzen. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2025 com.knthlz. All rights reserved.
