@@ -15,6 +15,7 @@ import '../screens/game_history_screen.dart';
 import '../widgets/steampunk_widgets.dart';
 import '../theme/steampunk_theme.dart';
 import '../services/game_history_service.dart';
+import '../widgets/video_logo.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -77,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   raceToScore: settings.raceToScore,
                   playerNames: [settings.player1Name, settings.player2Name],
                   playerHandicaps: [settings.player1Handicap, settings.player2Handicap],
+                  playerHandicapMultipliers: [settings.player1HandicapMultiplier, settings.player2HandicapMultiplier],
                   threeFoulRuleEnabled: settings.threeFoulRuleEnabled,
                   achievementManager: Provider.of<AchievementManager>(context, listen: false),
                 ),
@@ -116,12 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     // LOGO SECTION
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Image.asset(
-                        'assets/images/app_logo.png',
-                        width: 250,
-                        height: 250,
-                        fit: BoxFit.contain,
-                      ),
+                      child: const VideoLogo(),
                     ),
                     
                     const SizedBox(height: 48),

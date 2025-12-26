@@ -17,11 +17,12 @@ dependencies:
   flutter_svg: ^2.0.9
   confetti: ^0.7.0
   audioplayers: ^6.0.0
-  google_fonts: ^6.1.0
+  google_fonts: ^6.3.3
   url_launcher: ^6.3.0
   package_info_plus: ^8.0.0
   google_generative_ai: ^0.4.7
   mailer: ^6.0.1
+  video_player: ^2.10.1
 
 dev_dependencies:
   flutter_test:

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../services/player_service.dart';
 import '../models/game_settings.dart';
 import '../l10n/app_localizations.dart';
+import '../widgets/steampunk_widgets.dart';
 
 class NewGameSettingsScreen extends StatefulWidget {
   final Function(GameSettings) onStartGame;
@@ -356,6 +357,9 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                           _player1Controller.text = value;
                         },
                         onSubmitted: (_) => onSubmitted(),
+                        contextMenuBuilder: (context, editableTextState) {
+                          return const SizedBox.shrink();
+                        },
                       );
                     },
                   ),
@@ -432,6 +436,9 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                           _player2Controller.text = value;
                         },
                         onSubmitted: (_) => onSubmitted(),
+                        contextMenuBuilder: (context, editableTextState) {
+                          return const SizedBox.shrink();
+                        },
                       );
                     },
                   ),
@@ -496,20 +503,15 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
           const SizedBox(height: 32),
 
           // Start Game Button
-          SizedBox(
-            height: 56,
-            child: ElevatedButton(
-              onPressed: _startGame,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green[700],
-                foregroundColor: Colors.white,
-                elevation: 4,
-              ),
-              child: const Text(
-                'Start Game',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
+          SteampunkButton(
+            label: 'START GAME',
+            icon: Icons.play_circle_fill,
+            onPressed: _startGame,
+            backgroundGradientColors: [
+              Colors.green.shade900,
+              Colors.green.shade700,
+            ],
+            textColor: Colors.white,
           ),
         ],
       ),

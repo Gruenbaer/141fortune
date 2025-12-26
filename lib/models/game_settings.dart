@@ -6,6 +6,8 @@ class GameSettings {
   bool isLeagueGame;
   int player1Handicap;
   int player2Handicap;
+  double player1HandicapMultiplier;
+  double player2HandicapMultiplier;
   int maxInnings;
   bool soundEnabled;
   String languageCode;
@@ -20,6 +22,8 @@ class GameSettings {
     this.isLeagueGame = false,
     this.player1Handicap = 0,
     this.player2Handicap = 0,
+    this.player1HandicapMultiplier = 1.0,
+    this.player2HandicapMultiplier = 1.0,
     this.maxInnings = 25, // Standard for 14.1
     this.soundEnabled = true,
     this.languageCode = 'de', // Default: German
@@ -35,6 +39,8 @@ class GameSettings {
         'isLeagueGame': isLeagueGame,
         'player1Handicap': player1Handicap,
         'player2Handicap': player2Handicap,
+        'player1HandicapMultiplier': player1HandicapMultiplier,
+        'player2HandicapMultiplier': player2HandicapMultiplier,
         'maxInnings': maxInnings,
         'soundEnabled': soundEnabled,
         'languageCode': languageCode,
@@ -50,6 +56,8 @@ class GameSettings {
         isLeagueGame: json['isLeagueGame'] ?? false,
         player1Handicap: json['player1Handicap'] ?? 0,
         player2Handicap: json['player2Handicap'] ?? 0,
+        player1HandicapMultiplier: (json['player1HandicapMultiplier'] ?? 1.0).toDouble(),
+        player2HandicapMultiplier: (json['player2HandicapMultiplier'] ?? 1.0).toDouble(),
         maxInnings: json['maxInnings'] ?? 25,
         soundEnabled: json['soundEnabled'] ?? true,
         languageCode: json['languageCode'] ?? 'de',
@@ -65,6 +73,8 @@ class GameSettings {
     bool? isLeagueGame,
     int? player1Handicap,
     int? player2Handicap,
+    double? player1HandicapMultiplier,
+    double? player2HandicapMultiplier,
     int? maxInnings,
     bool? soundEnabled,
     String? languageCode,
@@ -79,6 +89,8 @@ class GameSettings {
       isLeagueGame: isLeagueGame ?? this.isLeagueGame,
       player1Handicap: player1Handicap ?? this.player1Handicap,
       player2Handicap: player2Handicap ?? this.player2Handicap,
+      player1HandicapMultiplier: player1HandicapMultiplier ?? this.player1HandicapMultiplier,
+      player2HandicapMultiplier: player2HandicapMultiplier ?? this.player2HandicapMultiplier,
       maxInnings: maxInnings ?? this.maxInnings,
       soundEnabled: soundEnabled ?? this.soundEnabled,
       languageCode: languageCode ?? this.languageCode,

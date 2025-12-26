@@ -129,11 +129,11 @@ class CyberpunkTheme {
         backgroundColor: blackVoid,
         foregroundColor: neonCyan,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.orbitron(
-          fontSize: 28,
+        titleTextStyle: GoogleFonts.crimsonPro(
+          fontSize: 30,
           color: neonCyan,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 2.0,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.5, // Reduced spacing
           shadows: [
             Shadow(blurRadius: 10, color: neonCyan.withOpacity(0.8), offset: Offset(0, 0)),
           ],
@@ -142,15 +142,23 @@ class CyberpunkTheme {
       ),
 
       textTheme: TextTheme(
-        displayLarge: GoogleFonts.orbitron(color: neonCyan, fontSize: 32, fontWeight: FontWeight.bold),
-        displayMedium: GoogleFonts.orbitron(color: neonCyan, fontSize: 24, fontWeight: FontWeight.bold),
-        displaySmall: GoogleFonts.orbitron(color: neonCyan, fontSize: 20),
+        // Headlines: Serif instead of Orbitron, but kept bold/neon
+        displayLarge: GoogleFonts.crimsonPro(color: neonCyan, fontSize: 36, fontWeight: FontWeight.bold),
+        displayMedium: GoogleFonts.crimsonPro(color: neonCyan, fontSize: 28, fontWeight: FontWeight.bold),
+        displaySmall: GoogleFonts.crimsonPro(color: neonCyan, fontSize: 24, fontWeight: FontWeight.bold),
         
-        bodyLarge: GoogleFonts.exo2(color: textWhite, fontSize: 18),
-        bodyMedium: GoogleFonts.exo2(color: textWhite, fontSize: 16),
-        bodySmall: GoogleFonts.exo2(color: neonCyan.withOpacity(0.8), fontSize: 14),
+        // Body: LibreBaskerville for consistency ("normal serif")
+        bodyLarge: GoogleFonts.libreBaskerville(color: textWhite, fontSize: 18),
+        bodyMedium: GoogleFonts.libreBaskerville(color: textWhite, fontSize: 16),
+        bodySmall: GoogleFonts.libreBaskerville(color: neonCyan.withOpacity(0.8), fontSize: 14),
         
-        labelLarge: GoogleFonts.orbitron(color: textBlack, fontSize: 18, fontWeight: FontWeight.bold),
+        // Buttons
+        labelLarge: GoogleFonts.crimsonPro(
+            color: textBlack, 
+            fontSize: 20, 
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.5
+        ),
       ),
       
       iconTheme: const IconThemeData(
@@ -160,8 +168,8 @@ class CyberpunkTheme {
 
       dialogTheme: DialogThemeData(
         backgroundColor: darkMatrix,
-        titleTextStyle: GoogleFonts.orbitron(color: neonCyan, fontSize: 24),
-        contentTextStyle: GoogleFonts.exo2(color: textWhite, fontSize: 16),
+        titleTextStyle: GoogleFonts.crimsonPro(color: neonCyan, fontSize: 26, fontWeight: FontWeight.bold),
+        contentTextStyle: GoogleFonts.libreBaskerville(color: textWhite, fontSize: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(4),
           side: const BorderSide(color: neonCyan, width: 2),

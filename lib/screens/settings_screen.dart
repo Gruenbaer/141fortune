@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../models/game_settings.dart';
+import '../models/game_settings.dart' hide Player;
 import '../services/settings_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/steampunk_theme.dart';
 import '../widgets/steampunk_widgets.dart';
 import 'package:provider/provider.dart';
 import '../models/achievement_manager.dart';
+import '../services/player_service.dart';
+
 
 class SettingsScreen extends StatefulWidget {
   final GameSettings currentSettings;
@@ -25,11 +27,23 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late GameSettings _settings;
   final _settingsService = SettingsService();
+  final _playerService = PlayerService();
+  List<Player> _players = [];
 
   @override
   void initState() {
     super.initState();
     _settings = widget.currentSettings;
+    _loadPlayers();
+  }
+
+  Future<void> _loadPlayers() async {
+    final players = await _playerService.getAllPlayers();
+    if (mounted) {
+      setState(() {
+        _players = players;
+      });
+    }
   }
 
 
@@ -168,6 +182,91 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _settings = _settings.copyWith(soundEnabled: value);
                     });
                   },
+                ),
+              ),
+              // Innings & Handicap Section
+              buildSectionHeader('Limits & Handicaps', Icons.tune),
+
+              // Max Innings Slider
+              buildPanelTile(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16, top: 12, right: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Max Innings', style: theme.textTheme.bodyLarge),
+                          Text(
+                            '${_settings.maxInnings}',
+                            style: theme.textTheme.displaySmall?.copyWith(fontSize: 20),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Slider(
+                      value: _settings.maxInnings.toDouble(),
+                      min: 10,
+                      max: 100,
+                      divisions: 18, // Steps of 5 (approx)
+                      label: '${_settings.maxInnings}',
+                      activeColor: SteampunkTheme.amberGlow,
+                      inactiveColor: SteampunkTheme.brassDark.withOpacity(0.3),
+                      thumbColor: SteampunkTheme.brassPrimary,
+                      onChanged: (value) {
+                        setState(() {
+                          _settings = _settings.copyWith(maxInnings: value.round());
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              // Player 1 Handicap
+              buildPanelTile(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_settings.player1Name, style: theme.textTheme.bodyLarge),
+                          Text('Point Multiplier', style: theme.textTheme.bodySmall),
+                        ],
+                      ),
+                      _buildMultiplierSelector(
+                        _settings.player1HandicapMultiplier,
+                        (val) => setState(() => _settings = _settings.copyWith(player1HandicapMultiplier: val)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Player 2 Handicap
+              buildPanelTile(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_settings.player2Name, style: theme.textTheme.bodyLarge),
+                          Text('Point Multiplier', style: theme.textTheme.bodySmall),
+                        ],
+                      ),
+                      _buildMultiplierSelector(
+                        _settings.player2HandicapMultiplier,
+                        (val) => setState(() => _settings = _settings.copyWith(player2HandicapMultiplier: val)),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -356,6 +455,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           maxLength: 50,
           maxLengthEnforcement: MaxLengthEnforcement.enforced,
           keyboardType: TextInputType.number,
+          contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
           decoration: InputDecoration(
             labelText: l10n.points,
             hintText: 'Enter target score',
@@ -389,45 +489,140 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _editPlayerName(int playerNumber) async {
     final l10n = AppLocalizations.of(context);
     final currentName = playerNumber == 1 ? _settings.player1Name : _settings.player2Name;
-    final controller = TextEditingController(text: currentName);
+    
+    // We don't use a TextEditingController here for initial text because Autocomplete 
+    // handles its own text via option selection or manual input.
+    // However, we want to pre-fill it.
     
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(playerNumber == 1 ? l10n.player1 : l10n.player2),
-        content: TextField(
-          controller: controller,
-          maxLength: 30,
-          maxLengthEnforcement: MaxLengthEnforcement.enforced,
-          decoration: InputDecoration(
-            labelText: l10n.playerName,
-            hintText: 'Enter player name',
-          ),
+        content: Autocomplete<String>(
+          initialValue: TextEditingValue(text: currentName),
+          optionsBuilder: (textEditingValue) {
+            if (textEditingValue.text.isEmpty) {
+              return const Iterable<String>.empty();
+            }
+            return _players
+                .map((p) => p.name)
+                .where((name) => name.toLowerCase().contains(
+                    textEditingValue.text.toLowerCase()));
+          },
+          onSelected: (name) {
+            // Auto-submit on select? Or just fill? Let's just let it fill.
+          },
+          fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+            return TextField(
+              controller: controller,
+              focusNode: focusNode,
+              maxLength: 30,
+              maxLengthEnforcement: MaxLengthEnforcement.enforced,
+              textCapitalization: TextCapitalization.words,
+              contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
+              decoration: InputDecoration(
+                labelText: l10n.playerName,
+                hintText: 'Enter or select player',
+              ),
+              onSubmitted: (_) => Navigator.pop(context, controller.text.trim()),
+            );
+          },
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          TextButton(
-            onPressed: () {
-              final value = controller.text.trim();
-              if (value.isNotEmpty) {
-                Navigator.pop(context, value);
-              }
-            },
-            child: const Text('Save'),
-          ),
+          // We need a way to get the text from the specific Autocomplete's internal controller
+          // or we can allow the user to type and press "Save".
+          // Since we can't easily access the inner controller of Autocomplete from the outside buttons 
+          // (without hoisting state), we rely on the onSubmitted of TextField or we need a trick.
+          // BUT, we can wrap this in a StatefulBuilder or just use a ValueNotifier if we really needed button access.
+          // Easier approach: The Autocomplete's TextField controller is local to the builder.
+          // We can use a variable captured in the closure if we construct it carefully,
+          // OR we can just instruct user to use keyboard Enter (onSubmitted).
+          // Better: Pass the controller out? No.
+          // Best: Simplest Autocomplete implementation often just updates a local variable `String selectedName`.
         ],
       ),
     );
 
-    if (result != null) {
+    // Revised Implementation to Capture Value for "Save" Button:
+    // We need a widget or setup that allows the Save button to read the input.
+    // Let's create a small Stateful wrapper inside the dialog builder or use common state pattern.
+    
+    final finalName = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        String pendingName = currentName;
+        return AlertDialog(
+          title: Text(playerNumber == 1 ? l10n.player1 : l10n.player2),
+          content: Autocomplete<String>(
+            initialValue: TextEditingValue(text: currentName),
+            optionsBuilder: (textEditingValue) {
+               pendingName = textEditingValue.text; // track updates
+               if (textEditingValue.text.isEmpty) {
+                 return const Iterable<String>.empty();
+               }
+               return _players
+                   .map((p) => p.name)
+                   .where((name) => name.toLowerCase().contains(
+                       textEditingValue.text.toLowerCase()));
+            },
+            onSelected: (name) {
+              pendingName = name;
+            },
+            fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+              // We need to attach a listener to track filtered text changes too if user doesn't select
+              if (!controller.hasListeners) {
+                 // Warning: This adds listener every rebuild if not careful. 
+                 // But FocusScope prevents this from rebuilding crazily.
+                 // Actually fieldViewBuilder receives the controller the Autocomplete created.
+                 // We can hook to it.
+                 controller.addListener(() {
+                   pendingName = controller.text;
+                 });
+              }
+              
+              return TextField(
+                controller: controller,
+                focusNode: focusNode,
+                maxLength: 30,
+                maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                textCapitalization: TextCapitalization.words,
+                contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
+                decoration: InputDecoration(
+                  labelText: l10n.playerName,
+                  hintText: 'Enter or select player',
+                ),
+                onSubmitted: (_) => Navigator.pop(context, pendingName.trim()),
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                 if (pendingName.trim().isNotEmpty) {
+                   Navigator.pop(context, pendingName.trim());
+                 }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      }
+    );
+
+    if (finalName != null && finalName != currentName) {
       setState(() {
         if (playerNumber == 1) {
-          _settings = _settings.copyWith(player1Name: result);
+          _settings = _settings.copyWith(player1Name: finalName);
         } else {
-          _settings = _settings.copyWith(player2Name: result);
+          _settings = _settings.copyWith(player2Name: finalName);
         }
       });
     }
@@ -444,5 +639,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
       Navigator.pop(context);
     }
+  }
+  Widget _buildMultiplierSelector(double current, Function(double) onChanged) {
+    return Container(
+      decoration: BoxDecoration(
+        color: SteampunkTheme.brassDark.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: SteampunkTheme.brassPrimary.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [1.0, 2.0, 3.0].map((val) {
+          final isSelected = current == val;
+          return GestureDetector(
+            onTap: () => onChanged(val),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? SteampunkTheme.amberGlow : Colors.transparent,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Text(
+                '${val.toInt()}x',
+                style: TextStyle(
+                  color: isSelected ? Colors.black : SteampunkTheme.brassBright,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 }

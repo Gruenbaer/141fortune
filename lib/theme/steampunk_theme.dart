@@ -49,13 +49,14 @@ class SteampunkTheme {
         ),
       ),
       
-      // AppBar Theme
+        // AppBar Theme
       appBarTheme: AppBarTheme(
         backgroundColor: mahoganyDark,
         foregroundColor: brassPrimary,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.rye(
-          fontSize: 28,
+        titleTextStyle: GoogleFonts.crimsonPro(
+          fontSize: 30, // Slightly larger to match presence
+          fontWeight: FontWeight.w800, // Extra Bold for Title
           color: brassPrimary,
           shadows: [
             const Shadow(blurRadius: 2, color: Colors.black, offset: Offset(1, 1)),
@@ -66,18 +67,23 @@ class SteampunkTheme {
       
       // Text Theme
       textTheme: TextTheme(
-        // Headlines (Victorian style)
-        displayLarge: GoogleFonts.rye(color: brassPrimary, fontSize: 32),
-        displayMedium: GoogleFonts.rye(color: brassPrimary, fontSize: 24),
-        displaySmall: GoogleFonts.rye(color: brassPrimary, fontSize: 20),
+        // Headlines (Victorian style -> Classic Serif)
+        displayLarge: GoogleFonts.crimsonPro(color: brassPrimary, fontSize: 36, fontWeight: FontWeight.w700),
+        displayMedium: GoogleFonts.crimsonPro(color: brassPrimary, fontSize: 28, fontWeight: FontWeight.w700),
+        displaySmall: GoogleFonts.crimsonPro(color: brassPrimary, fontSize: 24, fontWeight: FontWeight.w700),
         
         // Body text (Readable Serif or Slab Serif)
         bodyLarge: GoogleFonts.libreBaskerville(color: steamWhite, fontSize: 18),
         bodyMedium: GoogleFonts.libreBaskerville(color: steamWhite, fontSize: 16),
         bodySmall: GoogleFonts.libreBaskerville(color: brassPrimary.withOpacity(0.8), fontSize: 14),
         
-        // Button text
-        labelLarge: GoogleFonts.rye(color: leatherDark, fontSize: 18, fontWeight: FontWeight.bold),
+        // Button text (Condensed, Bold Serif)
+        labelLarge: GoogleFonts.crimsonPro(
+            color: leatherDark, 
+            fontSize: 20, // Slightly larger than Rye's 18 as it's more compact
+            fontWeight: FontWeight.w900, 
+            letterSpacing: 0.5 // Reduce spacing slightly
+        ),
       ),
       
       // Icon Theme
@@ -89,7 +95,7 @@ class SteampunkTheme {
       // Dialog Theme
       dialogTheme: DialogThemeData(
         backgroundColor: mahoganyLight,
-        titleTextStyle: GoogleFonts.rye(color: brassPrimary, fontSize: 24),
+        titleTextStyle: GoogleFonts.crimsonPro(color: brassPrimary, fontSize: 26, fontWeight: FontWeight.bold),
         contentTextStyle: GoogleFonts.libreBaskerville(color: steamWhite, fontSize: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),

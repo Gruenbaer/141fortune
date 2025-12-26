@@ -5,6 +5,7 @@ class Player {
   bool isActive;
   int saves; // Statistics: number of safe plays
   int consecutiveFouls; // Track consecutive fouls for 3-foul rule
+  double handicapMultiplier; // Points multiplier (1.0, 2.0, 3.0)
 
   Player({
     required this.name,
@@ -13,6 +14,7 @@ class Player {
     this.isActive = false,
     this.saves = 0,
     this.consecutiveFouls = 0,
+    this.handicapMultiplier = 1.0,
   });
 
   void addScore(int points) {
@@ -34,6 +36,7 @@ class Player {
     bool? isActive,
     int? saves,
     int? consecutiveFouls,
+    double? handicapMultiplier,
   }) {
     return Player(
       name: name ?? this.name,
@@ -42,6 +45,7 @@ class Player {
       isActive: isActive ?? this.isActive,
       saves: saves ?? this.saves,
       consecutiveFouls: consecutiveFouls ?? this.consecutiveFouls,
+      handicapMultiplier: handicapMultiplier ?? this.handicapMultiplier,
     );
   }
   Map<String, dynamic> toJson() => {
@@ -51,6 +55,7 @@ class Player {
     'isActive': isActive,
     'saves': saves,
     'consecutiveFouls': consecutiveFouls,
+    'handicapMultiplier': handicapMultiplier,
   };
 
   factory Player.fromJson(Map<String, dynamic> json) => Player(
@@ -60,5 +65,6 @@ class Player {
     isActive: json['isActive'] as bool? ?? false,
     saves: json['saves'] as int? ?? 0,
     consecutiveFouls: json['consecutiveFouls'] as int? ?? 0,
+    handicapMultiplier: (json['handicapMultiplier'] ?? 1.0).toDouble(),
   );
 }

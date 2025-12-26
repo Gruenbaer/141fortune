@@ -19,6 +19,7 @@ class GameState extends ChangeNotifier {
   Player? winner;
   String? lastAction;
   bool showThreeFoulPopup = false;
+  bool showTwoFoulWarning = false;
   
   // Foul Mode Flag
   FoulMode foulMode = FoulMode.none;
@@ -114,12 +115,19 @@ class GameState extends ChangeNotifier {
     required this.raceToScore,
     required List<String> playerNames,
     List<int> playerHandicaps = const [0, 0],
+    List<double> playerHandicapMultipliers = const [1.0, 1.0], // New
     bool threeFoulRuleEnabled = true,
     this.achievementManager,
   }) {
     players = List.generate(playerNames.length, (index) {
       final handicap = (index < playerHandicaps.length) ? playerHandicaps[index] : 0;
-      return Player(name: playerNames[index], isActive: false, score: handicap);
+      final multiplier = (index < playerHandicapMultipliers.length) ? playerHandicapMultipliers[index] : 1.0;
+      return Player(
+        name: playerNames[index], 
+        isActive: false, 
+        score: handicap,
+        handicapMultiplier: multiplier,
+      );
     });
 
     players[0].isActive = true;
@@ -146,12 +154,7 @@ class GameState extends ChangeNotifier {
     }
 
     // Update Player Names (if changed)
-    // We assume settings.player1Name maps to players[0]
     if (players[0].name != settings.player1Name) {
-      // We can't change final name field in Player, so we create a copy? 
-      // Actually Player.name is final. Converting Player.name to non-final or using copyWith.
-      // GameState expects mutable players list.
-      // Let's replace the entry with a copyWith
        players[0] = players[0].copyWith(name: settings.player1Name);
        somethingChanged = true;
        _logAction('Player 1 renamed to ${settings.player1Name}');
@@ -161,6 +164,19 @@ class GameState extends ChangeNotifier {
        players[1] = players[1].copyWith(name: settings.player2Name);
        somethingChanged = true;
        _logAction('Player 2 renamed to ${settings.player2Name}');
+    }
+
+    // Update Handicap Multipliers
+    if (players[0].handicapMultiplier != settings.player1HandicapMultiplier) {
+      players[0] = players[0].copyWith(handicapMultiplier: settings.player1HandicapMultiplier);
+      somethingChanged = true;
+       _logAction('Player 1 Handicap changed to ${settings.player1HandicapMultiplier}x');
+    }
+
+    if (players[1].handicapMultiplier != settings.player2HandicapMultiplier) {
+      players[1] = players[1].copyWith(handicapMultiplier: settings.player2HandicapMultiplier);
+      somethingChanged = true;
+       _logAction('Player 2 Handicap changed to ${settings.player2HandicapMultiplier}x');
     }
     
     // Check win condition if score limit was lowered
@@ -221,6 +237,11 @@ class GameState extends ChangeNotifier {
 
   void dismissThreeFoulPopup() {
     showThreeFoulPopup = false;
+    notifyListeners();
+  }
+
+  void dismissTwoFoulWarning() {
+    showTwoFoulWarning = false;
     notifyListeners();
   }
 
@@ -318,9 +339,11 @@ class GameState extends ChangeNotifier {
       
       // If points > 0, we pocketed balls defensively
       if (points > 0) {
-        currentPlayer.addScore(points);
+        // Apply Handicap Multiplier to positive points
+        final scoredPoints = (points * currentPlayer.handicapMultiplier).round();
+        currentPlayer.addScore(scoredPoints);
         currentPlayer.incrementSaves(); 
-        _logAction('${currentPlayer.name}: Defensive Pocket (+$points)');
+        _logAction('${currentPlayer.name}: Defensive Pocket (+$scoredPoints)');
         
         // Update rack to new count
         _updateRackCount(newBallCount);
@@ -361,15 +384,30 @@ class GameState extends ChangeNotifier {
       
       // Normal Points
       if (points != 0) {
-         currentPlayer.addScore(points);
+         if (points > 0) {
+           final scoredPoints = (points * currentPlayer.handicapMultiplier).round();
+           currentPlayer.addScore(scoredPoints);
+         } else {
+           // Negative points? Logic usually prevents this unless input error.
+           // If balls tapped < balls previous, points is positive.
+           // If NEW count > OLD count? (Balls added?) -> points negative.
+           // Usually we don't multiply negative.
+           currentPlayer.addScore(points);
+         }
       }
     }
 
 
     // Log calculation
     if (points != 0 || foulText.isNotEmpty) {
-      String sign = points > 0 ? "+" : "";
-      _logAction('${currentPlayer.name}: $sign$points pts$foulText (Left: $newBallCount)');
+      // Calculate effective displayed points for log
+      int displayPoints = points;
+      if (currentFoulMode == FoulMode.none && points > 0) {
+        displayPoints = (points * currentPlayer.handicapMultiplier).round();
+      }
+      
+      String sign = displayPoints > 0 ? "+" : "";
+      _logAction('${currentPlayer.name}: $sign$displayPoints pts$foulText (Left: $newBallCount)');
     }
 
     // Update Rack State
@@ -478,8 +516,30 @@ class GameState extends ChangeNotifier {
       currentPlayer.consecutiveFouls = 0;
     }
 
-    currentPlayer.addScore(points);
-    _logAction('${currentPlayer.name}: Double-Sack! +$points$foulText');
+    // Apply multiplier to the POSITIVE portion (15).
+    // Penalties were added to points above.
+    // Logic: Points = 15 + penalty. 
+    // If penalty is -2 (Break foul), total is 13?
+    // Or is it 15 * X + penalty?
+    // Usually Double Sack means "I cleared table (+15)".
+    // So +15 should be multiplied.
+    
+    // Recalculate based on components
+
+    
+    // Since previous logic block calculated 'points' as inclusive, let's override it
+    // But wait, the previous block called foulTracker which updates state (consecutive counts).
+    // We should keep that side effect.
+    
+    // Let's assume 'points' variable holds raw points (15 + penalty).
+    // We need to extract the 15, multiply it, and add penalty back.
+    // points = 15 + penalty.
+    // penalty = points - 15.
+    int penalty = points - 15;
+    int multipliedPoints = (15 * currentPlayer.handicapMultiplier).round() + penalty;
+    
+    currentPlayer.addScore(multipliedPoints);
+    _logAction('${currentPlayer.name}: Double-Sack! +$multipliedPoints$foulText');
     
     _resetRack();
 
@@ -517,6 +577,12 @@ class GameState extends ChangeNotifier {
     currentPlayerIndex = 1 - currentPlayerIndex;
     
     currentPlayer.isActive = true;
+
+    // Check for 2-Foul Warning upon entering turn
+    if (foulTracker.threeFoulRuleEnabled && currentPlayer.consecutiveFouls == 2) {
+      showTwoFoulWarning = true;
+    }
+
     notifyListeners();
   }
 
@@ -576,6 +642,7 @@ class GameState extends ChangeNotifier {
     winner = null;
     lastAction = null;
     showThreeFoulPopup = false;
+    showTwoFoulWarning = false;
     foulMode = FoulMode.none;
     matchLog.clear();
     // We do NOT clear undo stack, so reset can be undone!

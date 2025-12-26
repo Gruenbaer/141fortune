@@ -32,7 +32,8 @@ class SteampunkBackground extends StatelessWidget {
 }
 
 class SteampunkButton extends StatefulWidget {
-  final String label;
+  final String? label;
+  final Widget? child;
   final VoidCallback onPressed;
   final IconData? icon;
   final Color? textColor;
@@ -40,12 +41,13 @@ class SteampunkButton extends StatefulWidget {
 
   const SteampunkButton({
     super.key,
-    required this.label,
+    this.label,
+    this.child,
     required this.onPressed,
     this.icon,
     this.textColor,
     this.backgroundGradientColors,
-  });
+  }) : assert(label != null || child != null, 'Label or Child must be provided');
 
   @override
   State<SteampunkButton> createState() => _SteampunkButtonState();
@@ -87,7 +89,7 @@ class _SteampunkButtonState extends State<SteampunkButton> with SingleTickerProv
         child: Container(
           width: double.infinity,
           margin: const EdgeInsets.symmetric(vertical: 8),
-          constraints: const BoxConstraints(maxWidth: 400, minHeight: 80, maxHeight: 80),
+          constraints: const BoxConstraints(maxWidth: 400, minHeight: 60), // Reduced minHeight, removed maxHeight
           child: CustomPaint(
             painter: colors.themeId == 'cyberpunk' 
                 ? CyberpunkFramePainter(colors) 
@@ -96,6 +98,7 @@ class _SteampunkButtonState extends State<SteampunkButton> with SingleTickerProv
               // Inner content area
               margin: const EdgeInsets.all(12),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              alignment: Alignment.center, // Strictly center the child content
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
@@ -124,33 +127,33 @@ class _SteampunkButtonState extends State<SteampunkButton> with SingleTickerProv
                   ),
                 ],
               ),
-              child: Row(
+              child: widget.child ?? Row(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center, // Ensure vertical centering
                 children: [
                   if (widget.icon != null) ...[
                     Icon(
                       widget.icon, 
-                      color: widget.textColor ?? colors.textContrast,
+                      color: widget.textColor ?? colors.primary,
                       size: 24,
                     ),
                     const SizedBox(width: 12),
                   ],
                   Flexible(
                     child: Text(
-                      widget.label.toUpperCase(),
+                      widget.label?.toUpperCase() ?? '',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: widget.textColor ?? colors.textContrast,
-                        letterSpacing: 1.0,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
+                        color: widget.textColor ?? const Color(0xFFF0F0F0), // Near white for contrast
+                        letterSpacing: 0.5, // Reduced from 1.0 for space saving
                         shadows: [
                           Shadow(
-                            color: colors.textMain.withOpacity(0.5),
-                            offset: const Offset(0, 1),
-                            blurRadius: 1,
+                            color: Colors.black.withOpacity(0.8), // Stronger shadow
+                            offset: const Offset(1, 1),
+                            blurRadius: 2,
                           ),
                         ],
+                        fontWeight: FontWeight.w900, // Black weight
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 2,
