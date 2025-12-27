@@ -995,26 +995,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
        if (gameState.foulMode == FoulMode.severe && ballNumber != 15 && ballNumber != 0) {
         // Trigger progressive hint
         gameState.reportBreakFoulError(ballNumber: ballNumber);
-        if (gameState.breakFoulErrorCount == 3) {
-             // 3rd Error: Show Dialog via event queue (safe)
-             gameState.setShowBreakFoulHint(false);
-
-             if (!gameState.settings.hasSeenBreakFoulRules) {
-                // Update Setting immediately so it doesn't show again
-                final newSettings = gameState.settings.copyWith(hasSeenBreakFoulRules: true);
-                gameState.updateSettings(newSettings);
-                
-                // Queue the dialog via event system (safe lifecycle)
-                gameState.eventQueue.add(WarningEvent(
-                  "Break Foul",
-                  "⚠️ Special Rules:\n\n"
-                  "• You CAN commit Break Foul again\n"
-                  "• The 3-Foul rule does NOT apply\n"
-                  "• Each Break Foul is -2 points\n"
-                  "• Only Ball 15 ends the turn"
-                ));
-             }
-          }
+        // No dialog - just apply the foul directly
         return;
       }
       

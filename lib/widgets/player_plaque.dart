@@ -78,11 +78,13 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
           }
         });
       } else {
-        // Score Increased (Pot/Points) -> Update Immediately (or animate differently later)
+        // Score Increased (Pot/Points) -> Update Immediately (no animation)
         if (_visualScore != widget.player.score) {
           setState(() {
             _visualScore = widget.player.score;
           });
+          // Visual Bump REMOVED - no plaque animations
+          // _effectController.forward(from: 0.0);
         }
       }
     }
@@ -96,7 +98,7 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
 
   // Exposed method to trigger effect AND update score
   void triggerPenaltyImpact() {
-    _effectController.forward(from: 0.0);
+    // _effectController.forward(from: 0.0); // REMOVED - no plaque animations
     
     // Award the score (Sync visual to actual)
     if (_visualScore != widget.player.score) {
@@ -199,12 +201,10 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
                       crossAxisAlignment: CrossAxisAlignment.baseline,
                       textBaseline: TextBaseline.alphabetic,
                       children: [
-                        Transform.scale(
-                          scale: _scaleAnimation.value,
-                          child: Text(
-                            key: scoreKey,
-                            '$_visualScore',
-                            style: GoogleFonts.nunito(
+                        Text(
+                          key: scoreKey,
+                          '$_visualScore',
+                          style: GoogleFonts.nunito(
                             textStyle: theme.textTheme.displayMedium,
                             color: scoreColor,
                             fontSize: 42,
@@ -216,7 +216,7 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
                                 blurRadius: 10,
                               ),
                             ],
-                          ),),
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -272,8 +272,7 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
                   ),
                 ],
               ),
-            ),
-          );
+            );
       }
     );
   }
