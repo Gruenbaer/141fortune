@@ -22,7 +22,7 @@ class PlayerPlaque extends StatefulWidget {
 
 class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderStateMixin {
   late AnimationController _effectController;
-  late Animation<Offset> _shakeAnimation;
+  // late Animation<Offset> _shakeAnimation; // REMOVED - causing overflow flashing
   late Animation<double> _scaleAnimation;
   
   // UI Logic: Visual Score (delayed update)
@@ -38,14 +38,14 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
     _effectController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 500));
 
-    // Shake: Sine wave to move left/right
-    _shakeAnimation = TweenSequence<Offset>([
-      TweenSequenceItem(tween: Tween(begin: Offset.zero, end: const Offset(-5, 0)), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: const Offset(-5, 0), end: const Offset(5, 0)), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: const Offset(5, 0), end: const Offset(-5, 0)), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: const Offset(-5, 0), end: const Offset(5, 0)), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: const Offset(5, 0), end: Offset.zero), weight: 1),
-    ]).animate(CurvedAnimation(parent: _effectController, curve: Curves.easeInOut));
+    // Shake: REMOVED - causing overflow flashing
+    // _shakeAnimation = TweenSequence<Offset>([
+    //   TweenSequenceItem(tween: Tween(begin: Offset.zero, end: const Offset(-5, 0)), weight: 1),
+    //   TweenSequenceItem(tween: Tween(begin: const Offset(-5, 0), end: const Offset(5, 0)), weight: 2),
+    //   TweenSequenceItem(tween: Tween(begin: const Offset(5, 0), end: const Offset(-5, 0)), weight: 2),
+    //   TweenSequenceItem(tween: Tween(begin: const Offset(-5, 0), end: const Offset(5, 0)), weight: 2),
+    //   TweenSequenceItem(tween: Tween(begin: const Offset(5, 0), end: Offset.zero), weight: 1),
+    // ]).animate(CurvedAnimation(parent: _effectController, curve: Curves.easeInOut));
     
     // Scale: Bump up
     _scaleAnimation = TweenSequence<double>([
