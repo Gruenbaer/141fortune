@@ -1081,13 +1081,25 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           child: child,
                        );
                     },
-                    child: BallButton(
-                      ballNumber: rows[r][c],
-                      isActive: !gameState.gameOver && 
-                                gameState.activeBalls.contains(rows[r][c]) &&
-                                canTapBall(rows[r][c]),
-                      onTap: () => handleTap(rows[r][c]),
-                    ),
+                    child: (rows[r][c] == 15 && gameState.foulMode == FoulMode.severe)
+                            ? PulseWidget(
+                                child: BallButton(
+                                  ballNumber: rows[r][c],
+                                  isActive: !gameState.gameOver && 
+                                            gameState.activeBalls.contains(rows[r][c]) &&
+                                            canTapBall(rows[r][c]),
+                                  onTap: () => handleTap(rows[r][c]),
+                                ),
+                              )
+                            : BallButton(
+                                ballNumber: rows[r][c],
+                                // Grey out all balls except 15 during Break Foul
+                                isActive: !gameState.gameOver && 
+                                          gameState.activeBalls.contains(rows[r][c]) &&
+                                          canTapBall(rows[r][c]) &&
+                                          (gameState.foulMode != FoulMode.severe || rows[r][c] == 15),
+                                onTap: () => handleTap(rows[r][c]),
+                              ),
                   ),
                 ),
               ),
