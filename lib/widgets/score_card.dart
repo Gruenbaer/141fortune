@@ -39,7 +39,7 @@ class ScoreCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Header
+          // Header Row 1: Player Names
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
@@ -49,45 +49,51 @@ class ScoreCard extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Inning',
-                    style: TextStyle(
-                      color: colors.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Expanded(
-                  flex: 3,
+                  flex: 4,
                   child: Text(
                     player1.name.toUpperCase(),
                     style: TextStyle(
                       color: player1.name == winnerName 
                           ? colors.primaryBright 
                           : colors.textMain,
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,
                   ),
                 ),
                 Expanded(
-                  flex: 3,
+                  flex: 1,
+                  child: SizedBox(), // Spacer for Inning column
+                ),
+                Expanded(
+                  flex: 4,
                   child: Text(
                     player2.name.toUpperCase(),
                     style: TextStyle(
                       color: player2.name == winnerName 
                           ? colors.primaryBright 
                           : colors.textMain,
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,
                   ),
                 ),
+              ],
+            ),
+          ),
+          // Header Row 2: Columns
+          Container(
+            padding: const EdgeInsets.only(bottom: 8),
+            color: colors.backgroundCard,
+            child: Row(
+              children: [
+                Expanded(flex: 2, child: _buildHeaderLabel(colors, 'POINTS')),
+                Expanded(flex: 2, child: _buildHeaderLabel(colors, 'TOTAL')),
+                Expanded(flex: 1, child: _buildHeaderLabel(colors, 'INN')),
+                Expanded(flex: 2, child: _buildHeaderLabel(colors, 'TOTAL')),
+                Expanded(flex: 2, child: _buildHeaderLabel(colors, 'POINTS')),
               ],
             ),
           ),
@@ -98,78 +104,28 @@ class ScoreCard extends StatelessWidget {
           ),
           
           // Result row (Total Score)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: colors.primaryDark, width: 2)),
-              color: colors.backgroundCard.withOpacity(0.3),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    player1.name.toUpperCase(),
-                    style: TextStyle(
-                      color: player1.name == winnerName 
-                          ? colors.primaryBright 
-                          : colors.textMain,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    'TOTAL',
-                    style: TextStyle(color: colors.primaryDark, fontSize: 10),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Text(
-                    '#',
-                    style: TextStyle(
-                      color: colors.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                   child: Text(
-                    'TOTAL',
-                    style: TextStyle(color: colors.primaryDark, fontSize: 10),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    player2.name.toUpperCase(),
-                    style: TextStyle(
-                      color: player2.name == winnerName 
-                          ? colors.primaryBright 
-                          : colors.textMain,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Footer (Optional Total Row if needed, or remove as redundant if total acts as running total)
+          // Removing the specific footer row to keep it clean as per user request for standard card style.
+          // Or we can keep a summary row? Let's check user request: "name cols...".
+          // The grid itself tracks totals.
         ],
       ),
     );
   }
 
+
+  Widget _buildHeaderLabel(FortuneColors colors, String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: colors.textMain.withOpacity(0.7),
+        fontSize: 10,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 1.0,
+      ),
+      textAlign: TextAlign.center,
+    );
+  }
 
   Widget _buildInningRow(BuildContext context, int inning, Map<String, Map<int, InningStat>> inningScores) {
     final colors = FortuneColors.of(context);
@@ -199,15 +155,12 @@ class ScoreCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // P1 Notation
+          // P1 Points
           Expanded(
-            flex: 3,
+            flex: 2,
             child: Text(
               p1Notation,
-              style: TextStyle(
-                color: colors.textMain,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: colors.textMain, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
           ),
@@ -216,15 +169,11 @@ class ScoreCard extends StatelessWidget {
             flex: 2,
             child: Text(
               p1Total,
-              style: TextStyle(
-                color: colors.primaryBright,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: colors.primary, fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ),
-          // Inning # (Center)
+          // Inning #
           Expanded(
             flex: 1,
             child: Text(

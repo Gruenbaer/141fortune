@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 /// Message Overlay: Fades in/out at screen center
 class FoulMessageOverlay extends StatefulWidget {
@@ -110,6 +111,7 @@ class _FoulPointsOverlayState extends State<FoulPointsOverlay> with SingleTicker
   late AnimationController _controller;
   late Animation<double> _opacityAnimation;
   late Animation<double> _scaleAnimation;
+  final _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -119,23 +121,29 @@ class _FoulPointsOverlayState extends State<FoulPointsOverlay> with SingleTicker
       duration: const Duration(milliseconds: 1500),
     );
 
-    // Opacity: Fade in, hold, fade out
+    // Opacity: Fade in, hold, fade out quickly
     _opacityAnimation = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 20),
-      TweenSequenceItem(tween: ConstantTween(1.0), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 30),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 60),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 20), // Faster fade out
     ]).animate(_controller);
 
-    // Scale: Zoom in (reduced to prevent overflow)
+    // Scale: Expand and shrink animation (simplified to avoid assertion errors)
     _scaleAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.5).chain(CurveTween(curve: Curves.elasticOut)), weight: 30),
-      TweenSequenceItem(tween: ConstantTween(1.5), weight: 70),
-    ]).animate(_controller);
+      TweenSequenceItem(tween: Tween(begin: 0.5, end: 1.5), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 1.5, end: 1.0), weight: 30),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 40),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     _controller.forward().then((_) {
       widget.onImpact(); // Trigger score update and shake
       widget.onFinish();
     });
+    
+    // Play sound for negative points
+    if (widget.points < 0) {
+      _audioPlayer.play(AssetSource('sounds/beeboo.wav'));
+    }
   }
 
   @override
@@ -150,26 +158,33 @@ class _FoulPointsOverlayState extends State<FoulPointsOverlay> with SingleTicker
       animation: _controller,
       builder: (context, child) {
         return Positioned(
-          left: widget.targetPosition.dx - 50,
-          top: widget.targetPosition.dy - 24, // Align with score height
-          child: Opacity(
-            opacity: _opacityAnimation.value,
-            child: Transform.scale(
-              scale: _scaleAnimation.value,
-              child: Material(
-                type: MaterialType.transparency,
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 200),
-                  child: Text(
-                    '${widget.points >= 0 ? "+" : ""}${widget.points}',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.nunito(
-                      fontSize: 48, // Reduced to prevent overflow
-                      fontWeight: FontWeight.w900,
-                      color: widget.points >= 0 ? Colors.greenAccent : Colors.redAccent,
-                      shadows: [
-                        const Shadow(blurRadius: 8, color: Colors.black, offset: Offset(1, 1)),
-                      ],
+          left: widget.targetPosition.dx - 40, // Centered
+          top: widget.targetPosition.dy - 16, // Align with score
+          child: IgnorePointer(
+            child: ClipRect(
+              child: Opacity(
+                opacity: _opacityAnimation.value,
+                child: Transform.scale(
+                  scale: _scaleAnimation.value,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 200, maxHeight: 100),
+                      child: FittedBox(
+                        fit: BoxFit.contain,
+                        child: Text(
+                          '${widget.points >= 0 ? "+" : ""}${widget.points}',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.nunito(
+                            fontSize: 84, // Double size (was 42)
+                            fontWeight: FontWeight.w900,
+                            color: widget.points >= 0 ? Colors.greenAccent : Colors.redAccent,
+                            shadows: [
+                              const Shadow(blurRadius: 4, color: Colors.black, offset: Offset(1, 1)),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),

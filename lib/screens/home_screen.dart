@@ -121,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     // LOGO SECTION
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: const VideoLogo(),
+                      child: VideoLogo(soundEnabled: Provider.of<GameSettings>(context).soundEnabled),
                     ),
                     
                     const SizedBox(height: 48),

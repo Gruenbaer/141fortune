@@ -89,44 +89,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
     
-    
-    return WillPopScope(
-      onWillPop: () async {
-        // Check if there are unsaved changes
-        if (_settings != widget.currentSettings) {
-          // Show confirmation dialog
-          final shouldSave = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Unsaved Changes'),
-              content: const Text('You have unsaved changes. Do you want to save them before leaving?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false), // Don't save
-                  child: const Text('Discard'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(null), // Cancel
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true), // Save
-                  child: const Text('Save'),
-                ),
-              ],
-            ),
-          );
-          
-          if (shouldSave == null) {
-            return false; // Cancel navigation
-          } else if (shouldSave) {
-            _saveSettings(); // Save before leaving
-          }
-          return true; // Allow navigation
-        }
-        return true; // No unsaved changes, allow navigation
-      },
-      child: Scaffold(
+    return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         leading: Builder(builder: (context) {

@@ -26,6 +26,7 @@ import 'package:google_fonts/google_fonts.dart'; // For Arial alternative (Lato/
 import '../services/player_service.dart' as stats; // For stats fetching
 import '../widgets/foul_overlays.dart';
 import '../widgets/safe_shield_overlay.dart'; // Flying Penalty Animation
+import '../widgets/re_rack_overlay.dart';
 import '../utils/ui_utils.dart'; // Zoom Dialog Helper
 
 class GameScreen extends StatefulWidget {
@@ -165,6 +166,12 @@ class _GameScreenState extends State<GameScreen> {
           ],
         ),
        );
+    } else if (event is ReRackEvent) {
+      // Show Re-Rack Splash Animation
+      _showReRackSplash(event.type, () {
+        _isProcessingEvent = false;
+        _processNextEvent();
+      });
     } else {
        // Unknown?
        _isProcessingEvent = false;
@@ -495,13 +502,23 @@ class _GameScreenState extends State<GameScreen> {
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.undo),
+                  icon: Icon(
+                    Icons.undo,
+                    shadows: colors.themeId == 'cyberpunk' ? [
+                       BoxShadow(color: colors.primary, blurRadius: 10, spreadRadius: 2),
+                    ] : [],
+                  ),
                   color: colors.primary,
                   tooltip: 'Undo',
                   onPressed: gameState.canUndo ? gameState.undo : null,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.redo),
+                  icon: Icon(
+                    Icons.redo,
+                    shadows: colors.themeId == 'cyberpunk' ? [
+                       BoxShadow(color: colors.primary, blurRadius: 10, spreadRadius: 2),
+                    ] : [],
+                  ),
                   color: colors.primary,
                   tooltip: 'Redo',
                   onPressed: gameState.canRedo ? gameState.redo : null,
@@ -746,7 +763,7 @@ class _GameScreenState extends State<GameScreen> {
                                 child: SteampunkButton(
                                     // 2. Wrap Custom Child in SizedBox for Exact Height Control (and consistency)
                                     child: SizedBox(
-                                      height: 72, 
+                                      // height removed to match Safe button natural sizing
                                       width: double.infinity, // Force full width to prevent resizing jitter
                                       child: Column(
                                         mainAxisSize: MainAxisSize.min,
@@ -759,12 +776,16 @@ class _GameScreenState extends State<GameScreen> {
                                                child: Text(
                                                  'BREAK FOUL',
                                                  maxLines: 1,
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                    color: Colors.white, // Bright White
                                                    fontWeight: FontWeight.w900,
                                                    fontSize: 18, 
                                                    letterSpacing: 0.5,
                                                    fontFamily: 'Crimson Pro',
+                                                   shadows: colors.themeId == 'cyberpunk' ? [
+                                                     BoxShadow(color: colors.primary, blurRadius: 10, spreadRadius: 2),
+                                                     BoxShadow(color: colors.primary, blurRadius: 20, spreadRadius: 5),
+                                                   ] : [],
                                                  ),
                                                ),
                                              ),
@@ -772,12 +793,15 @@ class _GameScreenState extends State<GameScreen> {
                                         else
                                            Text(
                                              gameState.foulMode == FoulMode.none ? 'NO\nFOUL' : 'FOUL',
-                                             style: const TextStyle(
+                                             style: TextStyle(
                                                color: Colors.white, 
                                                fontSize: 20, 
                                                fontWeight: FontWeight.w900,
                                                letterSpacing: 0.5,
-                                               fontFamily: 'Crimson Pro', // Fallback or use standard if global font set
+                                               fontFamily: 'Crimson Pro',
+                                               shadows: colors.themeId == 'cyberpunk' ? [
+                                                 BoxShadow(color: colors.primary, blurRadius: 10, spreadRadius: 2),
+                                               ] : [],
                                              ),
                                              textAlign: TextAlign.center,
                                            ),
@@ -785,11 +809,14 @@ class _GameScreenState extends State<GameScreen> {
                                         if (gameState.foulMode != FoulMode.none)
                                            Text(
                                               gameState.foulMode == FoulMode.normal ? '-1' : '-2',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 color: Colors.white, // Bright White
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 14, 
                                                 fontFamily: 'Crimson Pro',
+                                                shadows: colors.themeId == 'cyberpunk' ? [
+                                                   BoxShadow(color: colors.primary, blurRadius: 8),
+                                                ] : [],
                                               ),
                                               textAlign: TextAlign.center,
                                            ),
@@ -825,25 +852,36 @@ class _GameScreenState extends State<GameScreen> {
                                       mainAxisSize: MainAxisSize.min,
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        const Icon(
+                                        Icon(
                                           Icons.shield,
                                           color: Colors.white, 
                                           size: 24,
+                                          shadows: colors.themeId == 'cyberpunk' ? [
+                                             BoxShadow(color: colors.primary, blurRadius: 10),
+                                          ] : [],
                                         ),
                                         const SizedBox(height: 4),
-                                        const Text(
+                                        Text(
                                           'SAFE',
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 20,
                                             fontWeight: FontWeight.w900,
                                             fontFamily: 'Crimson Pro',
+                                            shadows: colors.themeId == 'cyberpunk' ? [
+                                               BoxShadow(color: colors.primary, blurRadius: 10, spreadRadius: 2),
+                                            ] : [],
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                  onPressed: gameState.gameOver ? () {} : gameState.onSafe,
+                                    onPressed: gameState.gameOver ? () {} : () {
+                                      if (!gameState.isSafeMode) {
+                                        _showSafeShield();
+                                      }
+                                      gameState.onSafe();
+                                    },
                                   // Green gradient when Active (Safe Mode ON)
                                   backgroundGradientColors: gameState.isSafeMode 
                                     ? const [Color(0xFF66BB6A), Color(0xFF2E7D32)] // Green/Dark Green
@@ -1145,7 +1183,25 @@ class _GameScreenState extends State<GameScreen> {
     );
     
     // Insert
-    Overlay.of(context).insert(_shieldOverlayEntry!);
+    Overlay.of(context, rootOverlay: true).insert(_shieldOverlayEntry!);
+  }
+
+  OverlayEntry? _reRackOverlayEntry;
+  
+  void _showReRackSplash(String type, VoidCallback onComplete) {
+    _reRackOverlayEntry = OverlayEntry(
+      builder: (context) => ReRackOverlay(
+        type: type,
+        onFinish: () {
+          _reRackOverlayEntry?.remove();
+          _reRackOverlayEntry = null;
+          onComplete();
+        },
+      ),
+    );
+    
+    // Insert
+    Overlay.of(context, rootOverlay: true).insert(_reRackOverlayEntry!);
   }
 
   void _showFlyingPenalty(int points, String message, Player player, VoidCallback onComplete) {
@@ -1208,8 +1264,8 @@ class _GameScreenState extends State<GameScreen> {
      );
      
      // 6. Insert both overlays
-     Overlay.of(context).insert(_messageOverlayEntry!);
-     Overlay.of(context).insert(_pointsOverlayEntry!);
+     Overlay.of(context, rootOverlay: true).insert(_messageOverlayEntry!);
+     Overlay.of(context, rootOverlay: true).insert(_pointsOverlayEntry!);
   }
 
   void _show2FoulWarning(BuildContext context, GameState gameState) {

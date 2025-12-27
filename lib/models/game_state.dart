@@ -24,6 +24,11 @@ class WarningEvent extends GameEvent {
   WarningEvent(this.title, this.message);
 }
 
+class ReRackEvent extends GameEvent {
+  final String type; // "14.1 Continuous", "After Foul", "Auto/Safe"
+  ReRackEvent(this.type);
+}
+
 class DecisionEvent extends GameEvent {
   final String title;
   final String message;
@@ -479,6 +484,8 @@ class GameState extends ChangeNotifier {
          if (points > 0) {
            final scoredPoints = (points * currentPlayer.handicapMultiplier).round();
            currentPlayer.addScore(scoredPoints);
+           // Queue animation event for positive points
+           eventQueue.add(FoulEvent(currentPlayer, scoredPoints, ""));
          } else {
            // Negative points? Logic usually prevents this unless input error.
            // If balls tapped < balls previous, points is positive.
@@ -523,6 +530,8 @@ class GameState extends ChangeNotifier {
       }
       
       _logAction('${currentPlayer.name}: Re-rack ($reRackType)');
+      // Queue re-rack animation event
+      eventQueue.add(ReRackEvent(reRackType));
       isReRack = true;
     }
 

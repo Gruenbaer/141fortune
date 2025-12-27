@@ -31,7 +31,7 @@ class GameSettings {
     this.soundEnabled = true,
     this.languageCode = 'de', // Default: German
     this.isDarkTheme = false, // Default: Light theme
-    this.themeId = 'steampunk',
+    this.themeId = 'cyberpunk',
     this.hasSeenBreakFoulRules = false,
     this.hasShown2FoulWarning = false,
     this.hasShown3FoulWarning = false,
