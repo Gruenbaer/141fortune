@@ -125,60 +125,57 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
         final nameColor = isActive ? colors.primaryBright : colors.primary;
         const scoreColor = Color(0xFFFFD700); // Standard Gold always
 
-        return Transform.translate(
-          offset: _shakeAnimation.value,
-          child: SizedBox(
-            height: 115, // Fixed height to prevent resizing
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: ShapeDecoration(
-                shape: isCyberpunk 
-                    ? BeveledRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: isActive ? colors.primaryBright : colors.primaryDark,
-                          width: isActive ? 3 : 2,
+        return Container(
+            // No fixed height constraints - controlled by Parent IntrinsicHeight
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: ShapeDecoration(
+                  shape: isCyberpunk 
+                      ? BeveledRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: isActive ? colors.primaryBright : colors.primaryDark,
+                            width: isActive ? 3 : 2,
+                          ),
+                        )
+                      : RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(
+                            color: isActive ? colors.primaryBright : colors.primaryDark,
+                            width: isActive ? 3 : 2,
+                          ),
                         ),
-                      )
-                    : RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(
-                          color: isActive ? colors.primaryBright : colors.primaryDark,
-                          width: isActive ? 3 : 2,
-                        ),
-                      ),
-                shadows: [
-                  // Outer shadow for depth
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.6),
-                    offset: const Offset(0, 4),
-                    blurRadius: 6,
-                  ),
-                  // Inner Glow for active player
-                  if (isActive)
+                  shadows: [
+                    // Outer shadow for depth
                     BoxShadow(
-                      color: colors.accent.withOpacity(0.4),
-                      blurRadius: 12,
-                      spreadRadius: 2,
+                      color: Colors.black.withOpacity(0.6),
+                      offset: const Offset(0, 4),
+                      blurRadius: 6,
                     ),
-                  // Penalty Glow removed (no flash)
-                ],
-                // Subtle gradient
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    colors.backgroundCard,
-                    Color.lerp(colors.backgroundCard, Colors.black, 0.4)!,
+                    // Inner Glow for active player
+                    if (isActive)
+                      BoxShadow(
+                        color: colors.accent.withOpacity(0.4),
+                        blurRadius: 12,
+                        spreadRadius: 2,
+                      ),
+                    // Penalty Glow removed (no flash)
                   ],
+                  // Subtle gradient
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      colors.backgroundCard,
+                      Color.lerp(colors.backgroundCard, Colors.black, 0.4)!,
+                    ],
+                  ),
                 ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment:
-                    widget.isLeft ? CrossAxisAlignment.start : CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.center, // Center vertically
-                children: [
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment:
+                      widget.isLeft ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center, // Center vertically
+                  children: [
                   // Player Name
                   Text(
                     widget.player.name.toUpperCase(),
@@ -276,8 +273,7 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
                 ],
               ),
             ),
-          ),
-        );
+          );
       }
     );
   }
