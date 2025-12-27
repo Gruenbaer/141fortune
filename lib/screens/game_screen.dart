@@ -46,7 +46,7 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Achievement? _achievementToShow;
   final GameHistoryService _historyService = GameHistoryService();
   late String _gameId; // Unique ID for this game
