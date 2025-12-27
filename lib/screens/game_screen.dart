@@ -81,58 +81,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           _processNextEvent(); // Loop
        });
     } else if (event is WarningEvent) {
-      // Show Dialog
-      showZoomDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => SizedBox(
-          width: MediaQuery.of(context).size.width * 0.85,
-          child: AlertDialog(
-            backgroundColor: Colors.amber.shade900,
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                 const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 32),
-                 const SizedBox(width: 8),
-                 Flexible(
-                   child: Text(
-                     event.title, 
-                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
-                     textAlign: TextAlign.center,
-                     overflow: TextOverflow.ellipsis,
-                     maxLines: 2,
-                   ),
-                 ),
-                 const SizedBox(width: 8),
-                 const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 32),
-              ],
-            ),
-            content: RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                style: const TextStyle(color: Colors.white, fontSize: 16),
-                children: [
-                  TextSpan(text: event.message),
-                ],
-              ),
-              ),
-            actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _isProcessingEvent = false;
-                _processNextEvent();
-              },
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.black45,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('I UNDERSTAND'),
-            ),
-          ],
-        ),
-      ),
-      );
+      // Skip WarningEvent dialogs entirely - no more Break Foul info
+      _isProcessingEvent = false;
+      _processNextEvent();
     } else if (event is DecisionEvent) {
        // Show Decision Dialog
        showZoomDialog(
@@ -1081,25 +1032,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           child: child,
                        );
                     },
-                    child: (rows[r][c] == 15 && gameState.foulMode == FoulMode.severe)
-                            ? PulseWidget(
-                                child: BallButton(
-                                  ballNumber: rows[r][c],
-                                  isActive: !gameState.gameOver && 
-                                            gameState.activeBalls.contains(rows[r][c]) &&
-                                            canTapBall(rows[r][c]),
-                                  onTap: () => handleTap(rows[r][c]),
-                                ),
-                              )
-                            : BallButton(
-                                ballNumber: rows[r][c],
-                                // Grey out all balls except 15 during Break Foul
-                                isActive: !gameState.gameOver && 
-                                          gameState.activeBalls.contains(rows[r][c]) &&
-                                          canTapBall(rows[r][c]) &&
-                                          (gameState.foulMode != FoulMode.severe || rows[r][c] == 15),
-                                onTap: () => handleTap(rows[r][c]),
-                              ),
+                    child: BallButton(
+                      ballNumber: rows[r][c],
+                      // Grey out all balls except 15 during Break Foul
+                      isActive: !gameState.gameOver && 
+                                gameState.activeBalls.contains(rows[r][c]) &&
+                                canTapBall(rows[r][c]) &&
+                                (gameState.foulMode != FoulMode.severe || rows[r][c] == 15),
+                      onTap: () => handleTap(rows[r][c]),
+                    ),
                   ),
                 ),
               ),

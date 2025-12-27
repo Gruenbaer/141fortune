@@ -432,10 +432,9 @@ class GameState extends ChangeNotifier {
     } else if (currentFoulMode == FoulMode.severe) {
       final penalty = foulTracker.applySevereFoul(currentPlayer); // Use current Player
       currentPlayer.addScore(penalty);
-      foulText = ' (Break Foul)';
+      // BREAK FOUL DIALOG REMOVED - User doesn't want any info/warnings
+      // foulText = ' (Break Foul)';
       
-      // Break Foul Rules dialog moved to 3rd error (see game_screen.dart)
-
       eventQueue.add(FoulEvent(currentPlayer, penalty, "Break Foul!")); // Usually -2
       
       // Break Foul Decision: Who breaks next?
