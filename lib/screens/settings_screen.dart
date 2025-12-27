@@ -89,7 +89,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
     
-    return Scaffold(
+    
+    return WillPopScope(
+      onWillPop: () async {
+        // Check if there are unsaved changes
+        if (_settings != widget.currentSettings) {
+          // Show confirmation dialog
+          final shouldSave = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Unsaved Changes'),
+              content: const Text('You have unsaved changes. Do you want to save them before leaving?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false), // Don't save
+                  child: const Text('Discard'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(null), // Cancel
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true), // Save
+                  child: const Text('Save'),
+                ),
+              ],
+            ),
+          );
+          
+          if (shouldSave == null) {
+            return false; // Cancel navigation
+          } else if (shouldSave) {
+            _saveSettings(); // Save before leaving
+          }
+          return true; // Allow navigation
+        }
+        return true; // No unsaved changes, allow navigation
+      },
+      child: Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         leading: Builder(builder: (context) {
@@ -102,11 +139,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
         centerTitle: true,
         iconTheme: IconThemeData(color: SteampunkTheme.brassPrimary),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-             color: SteampunkTheme.brassBright,
-            onPressed: _saveSettings,
-            tooltip: 'Save Configuration',
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.save),
+                color: SteampunkTheme.brassBright,
+                onPressed: _saveSettings,
+                tooltip: 'Save Configuration',
+              ),
+              if (_settings != widget.currentSettings)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),

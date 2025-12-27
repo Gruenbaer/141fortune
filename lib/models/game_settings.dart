@@ -13,6 +13,9 @@ class GameSettings {
   String languageCode;
   bool isDarkTheme;
   String themeId;
+  bool hasSeenBreakFoulRules;
+  bool hasShown2FoulWarning;
+  bool hasShown3FoulWarning;
 
   GameSettings({
     this.threeFoulRuleEnabled = true,
@@ -29,6 +32,9 @@ class GameSettings {
     this.languageCode = 'de', // Default: German
     this.isDarkTheme = false, // Default: Light theme
     this.themeId = 'steampunk',
+    this.hasSeenBreakFoulRules = false,
+    this.hasShown2FoulWarning = false,
+    this.hasShown3FoulWarning = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -46,6 +52,9 @@ class GameSettings {
         'languageCode': languageCode,
         'isDarkTheme': isDarkTheme,
         'themeId': themeId,
+        'hasSeenBreakFoulRules': hasSeenBreakFoulRules,
+      'hasShown2FoulWarning': hasShown2FoulWarning,
+      'hasShown3FoulWarning': hasShown3FoulWarning,
       };
 
   factory GameSettings.fromJson(Map<String, dynamic> json) => GameSettings(
@@ -63,6 +72,9 @@ class GameSettings {
         languageCode: json['languageCode'] ?? 'de',
         isDarkTheme: json['isDarkTheme'] ?? false,
         themeId: json['themeId'] ?? 'steampunk',
+        hasSeenBreakFoulRules: json['hasSeenBreakFoulRules'] ?? false,
+      hasShown2FoulWarning: json['hasShown2FoulWarning'] ?? false,
+      hasShown3FoulWarning: json['hasShown3FoulWarning'] ?? false,
       );
 
   GameSettings copyWith({
@@ -80,6 +92,9 @@ class GameSettings {
     String? languageCode,
     bool? isDarkTheme,
     String? themeId,
+    bool? hasSeenBreakFoulRules,
+    bool? hasShown2FoulWarning,
+    bool? hasShown3FoulWarning,
   }) {
     return GameSettings(
       threeFoulRuleEnabled: threeFoulRuleEnabled ?? this.threeFoulRuleEnabled,
@@ -96,6 +111,50 @@ class GameSettings {
       languageCode: languageCode ?? this.languageCode,
       isDarkTheme: isDarkTheme ?? this.isDarkTheme,
       themeId: themeId ?? this.themeId,
+      hasSeenBreakFoulRules: hasSeenBreakFoulRules ?? this.hasSeenBreakFoulRules,
+      hasShown2FoulWarning: hasShown2FoulWarning ?? this.hasShown2FoulWarning,
+      hasShown3FoulWarning: hasShown3FoulWarning ?? this.hasShown3FoulWarning,
     );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+  
+    return other is GameSettings &&
+      other.threeFoulRuleEnabled == threeFoulRuleEnabled &&
+      other.raceToScore == raceToScore &&
+      other.player1Name == player1Name &&
+      other.player2Name == player2Name &&
+      other.isLeagueGame == isLeagueGame &&
+      other.player1Handicap == player1Handicap &&
+      other.player2Handicap == player2Handicap &&
+      other.player1HandicapMultiplier == player1HandicapMultiplier &&
+      other.player2HandicapMultiplier == player2HandicapMultiplier &&
+      other.maxInnings == maxInnings &&
+      other.soundEnabled == soundEnabled &&
+      other.languageCode == languageCode &&
+      other.isDarkTheme == isDarkTheme &&
+      other.themeId == themeId &&
+      other.hasSeenBreakFoulRules == hasSeenBreakFoulRules;
+  }
+
+  @override
+  int get hashCode {
+    return threeFoulRuleEnabled.hashCode ^
+      raceToScore.hashCode ^
+      player1Name.hashCode ^
+      player2Name.hashCode ^
+      isLeagueGame.hashCode ^
+      player1Handicap.hashCode ^
+      player2Handicap.hashCode ^
+      player1HandicapMultiplier.hashCode ^
+      player2HandicapMultiplier.hashCode ^
+      maxInnings.hashCode ^
+      soundEnabled.hashCode ^
+      languageCode.hashCode ^
+      isDarkTheme.hashCode ^
+      themeId.hashCode ^
+      hasSeenBreakFoulRules.hashCode;
   }
 }

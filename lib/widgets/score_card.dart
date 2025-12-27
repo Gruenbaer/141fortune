@@ -107,9 +107,31 @@ class ScoreCard extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
+                  flex: 3,
+                  child: Text(
+                    player1.name.toUpperCase(),
+                    style: TextStyle(
+                      color: player1.name == winnerName 
+                          ? colors.primaryBright 
+                          : colors.textMain,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Expanded(
                   flex: 2,
                   child: Text(
-                    'Total',
+                    'TOTAL',
+                    style: TextStyle(color: colors.primaryDark, fontSize: 10),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    '#',
                     style: TextStyle(
                       color: colors.primary,
                       fontSize: 12,
@@ -119,24 +141,22 @@ class ScoreCard extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  flex: 3,
-                  child: Text(
-                    player1.score.toString(),
-                    style: TextStyle(
-                      color: player1.name == winnerName ? colors.primaryBright : colors.textMain,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  flex: 2,
+                   child: Text(
+                    'TOTAL',
+                    style: TextStyle(color: colors.primaryDark, fontSize: 10),
                     textAlign: TextAlign.center,
                   ),
                 ),
                 Expanded(
                   flex: 3,
                   child: Text(
-                    player2.score.toString(),
+                    player2.name.toUpperCase(),
                     style: TextStyle(
-                      color: player2.name == winnerName ? colors.primaryBright : colors.textMain,
-                      fontSize: 16,
+                      color: player2.name == winnerName 
+                          ? colors.primaryBright 
+                          : colors.textMain,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,
@@ -150,28 +170,28 @@ class ScoreCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInningRow(BuildContext context, int inning, Map<String, Map<int, String>> inningScores) {
+
+  Widget _buildInningRow(BuildContext context, int inning, Map<String, Map<int, InningStat>> inningScores) {
     final colors = FortuneColors.of(context);
+    final isLegacy = matchLog.isNotEmpty && !matchLog.first.contains(':');
+
+    // Data for single inning
+    final p1Data = inningScores[player1.name]?[inning];
+    final p2Data = inningScores[player2.name]?[inning]; // Expecting Map<String, dynamic> now? Or custom class..
     
-    // Check if this is a legacy format game
-    bool isLegacy = (inningScores[player1.name]?.isEmpty ?? true) && 
-                     (inningScores[player2.name]?.isEmpty ?? true);
+    // We need to refactor _parseInningScores return type to hold (Notation, Total)
     
-    String p1Score = '';
-    String p2Score = '';
+    String p1Notation = p1Data?.notation ?? '';
+    String p1Total = p1Data?.total != null ? '${p1Data!.total}' : '';
+
+    String p2Notation = p2Data?.notation ?? '';
+    String p2Total = p2Data?.total != null ? '${p2Data!.total}' : '';
     
-    if (!isLegacy) {
-      // New format - access by inning number
-      p1Score = inningScores[player1.name]?[inning] ?? '';
-      p2Score = inningScores[player2.name]?[inning] ?? '';
-    } else {
-      // Legacy format - show placeholder only in first inning
-      if (inning == 1) {
-        p1Score = '-';
-        p2Score = '-';
-      }
+    if (isLegacy && inning == 1) {
+       p1Notation = '-';
+       p2Notation = '-';
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
@@ -179,32 +199,61 @@ class ScoreCard extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // P1 Notation
+          Expanded(
+            flex: 3,
+            child: Text(
+              p1Notation,
+              style: TextStyle(
+                color: colors.textMain,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          // P1 Total
           Expanded(
             flex: 2,
             child: Text(
+              p1Total,
+              style: TextStyle(
+                color: colors.primaryBright,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          // Inning # (Center)
+          Expanded(
+            flex: 1,
+            child: Text(
               inning.toString(),
               style: TextStyle(
-                color: colors.textMain,
+                color: colors.accent,
                 fontSize: 12,
               ),
               textAlign: TextAlign.center,
             ),
           ),
+          // P2 Total
           Expanded(
-            flex: 3,
-            child: Text(
-              p1Score,
+            flex: 2,
+             child: Text(
+              p2Total,
               style: TextStyle(
-                color: colors.textMain,
+                color: colors.primaryBright,
                 fontSize: 12,
+                fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
             ),
           ),
+          // P2 Notation
           Expanded(
             flex: 3,
             child: Text(
-              p2Score,
+              p2Notation,
               style: TextStyle(
                 color: colors.textMain,
                 fontSize: 12,
@@ -217,65 +266,39 @@ class ScoreCard extends StatelessWidget {
     );
   }
 
-  Map<String, Map<int, String>> _parseInningScores() {
-    // Returns: { 
-    //   "Player1": { 1: "14.3", 2: "5F", 3: "1", ... },
-    //   "Player2": { 1: "2", 2: "8", ... }
-    // }
-    
-    // Check if empty or legacy
+  // Refactor return type: Map<PlayerName, Map<Inning, InningStat>>
+  Map<String, Map<int, InningStat>> _parseInningScores() {
     if (matchLog.isEmpty) {
         return { player1.name: {}, player2.name: {} };
     }
     
-    // Legacy check
     bool hasInningPrefix(String logEntry) {
         return logEntry.startsWith(RegExp(r'I\d+ \| '));
     }
 
     if (!hasInningPrefix(matchLog.last)) {
-      return {
-        player1.name: {},
-        player2.name: {},
-      };
+      return { player1.name: {}, player2.name: {} };
     }
     
-    Map<String, Map<int, String>> result = {
+    Map<String, Map<int, InningStat>> result = {
       player1.name: {},
       player2.name: {},
     };
     
-    // Track points accumulated in current inning (not as string, as number!)
-    Map<String, int> currentInningPoints = {
-      player1.name: 0,
-      player2.name: 0,
-    };
+    // Running Totals
+    Map<String, int> runningTotals = { player1.name: 0, player2.name: 0 };
     
-    Map<String, int> reRackPoints = {
-      player1.name: 0,
-      player2.name: 0,
-    };
+    // Inning Accumulators
+    Map<String, int> currentInningPoints = { player1.name: 0, player2.name: 0 };
+    Map<String, int> reRackPoints = { player1.name: 0, player2.name: 0 };
+    Map<String, bool> inReRackMode = { player1.name: false, player2.name: false };
+    Map<String, bool> hasFoul = { player1.name: false, player2.name: false };
+    Map<String, int> lastInning = { player1.name: 0, player2.name: 0 };
     
-    Map<String, bool> inReRackMode = {
-      player1.name: false,
-      player2.name: false,
-    };
-    
-    Map<String, bool> hasFoul = {
-      player1.name: false,
-      player2.name: false,
-    };
-    
-    Map<String, int> lastInning = {
-      player1.name: 0,
-      player2.name: 0,
-    };
-    
-    // Iterate chronologically
+    // Reverse Log (Chronological)
     for (int i = matchLog.length - 1; i >= 0; i--) {
       String logEntry = matchLog[i];
       
-      // Extract inning and action
       RegExp inningRegex = RegExp(r'I(\d+) \| (.+)');
       Match? inningMatch = inningRegex.firstMatch(logEntry);
       if (inningMatch == null) continue;
@@ -291,82 +314,157 @@ class ScoreCard extends StatelessWidget {
       }
       if (playerName == null) continue;
       
-      // Check if inning changed - finalize previous inning
+      // If Inning Changed for this player -> Finalize Previous
       if (lastInning[playerName]! > 0 && lastInning[playerName]! != inning) {
-        String notation = _buildInningNotation(
-          currentInningPoints[playerName]!,
-          reRackPoints[playerName]!,
-          inReRackMode[playerName]!,
-          hasFoul[playerName]!,
-        );
-        
-        if (notation.isNotEmpty) {
-          result[playerName]![lastInning[playerName]!] = notation;
-        }
-        
-        // Reset for new inning
-        currentInningPoints[playerName] = 0;
-        reRackPoints[playerName] = 0;
-        inReRackMode[playerName] = false;
-        hasFoul[playerName] = false;
+         _finalizeInning(
+            playerName, 
+            lastInning[playerName]!, 
+            currentInningPoints, 
+            runningTotals, 
+            reRackPoints, 
+            inReRackMode, 
+            hasFoul, 
+            result
+         );
       }
       
       lastInning[playerName] = inning;
       
-      // Parse action
+      // Process Action Points
+      int delta = 0;
       if (action.contains('Re-rack')) {
         inReRackMode[playerName] = true;
         reRackPoints[playerName] = currentInningPoints[playerName]!;
-        currentInningPoints[playerName] = 0; // Reset for post-re-rack scoring
+        currentInningPoints[playerName] = 0; 
       } else if (action.contains('Foul')) {
         hasFoul[playerName] = true;
-      } else if (action.contains('+')) {
-        RegExp pointsRegex = RegExp(r'\+(\d+)');
-        Match? match = pointsRegex.firstMatch(action);
-        if (match != null) {
-          int points = int.parse(match.group(1)!);
-          currentInningPoints[playerName] = currentInningPoints[playerName]! + points;
-        }
+        // Parse foul penalty if in log? Usually log has "Foul (-1)" or "Safe (0)"
+        // But our log format for foul is usually "Player: -1 pts (Foul)"
       }
+      
+      if (action.contains('pts') || action.contains('Double-Sack')) {
+         // Regex for signed int: (+15, -1, -2)
+         RegExp pointsRegex = RegExp(r'([+-]?\d+)\s*pts|([+-]?\d+)');
+         // We need to be careful not to match "I1" or ball count.
+         // Action string: "Player: -1 pts (Foul) (Left: 14)"
+         
+         // Simple scan for points
+         // If points are negative, they reduce total? 
+         // Running Total tracks the player score. 
+         // currentInningPoints tracks points IN THIS INNING for notation.
+         // Wait, "5.F" means 5 points then foul.
+         // So if I score 5 (valid), then I foul (-1).
+         // Inning Total: 4. Notation: "5.F"??
+         // Standard notation usually: Points scored in inning. 
+         // If foul ended the inning, "F".
+         // Does running total include the foul penalty? Yes.
+         
+         // We parse the exact delta from the log to update running total.
+         RegExp scoreRegex = RegExp(r':\s*([+-]?\d+)\s*pts|Double-Sack!\s*\+?(\d+)');
+         Match? match = scoreRegex.firstMatch(action);
+         if (match != null) {
+            String val = match.group(1) ?? match.group(2) ?? '0';
+            delta = int.parse(val);
+         }
+      }
+      
+      currentInningPoints[playerName] = currentInningPoints[playerName]! + delta;
+      // We do NOT update Running Total here yet? 
+      // Or do we? The running total is end-of-inning state.
+      // So we accumulate delta into 'currentInningPoints', and add to running total at end of inning processing?
+      // YES.
     }
     
-    // Finalize remaining innings
-    for (var player in [player1.name, player2.name]) {
-      if (lastInning[player]! > 0) {
-        String notation = _buildInningNotation(
-          currentInningPoints[player]!,
-          reRackPoints[player]!,
-          inReRackMode[player]!,
-          hasFoul[player]!,
-        );
-        
-        if (notation.isNotEmpty) {
-          result[player]![lastInning[player]!] = notation;
-        }
-      }
+    // Finalize Last Inning
+    for (var p in [player1.name, player2.name]) {
+       if (lastInning[p]! > 0) {
+          _finalizeInning(
+            p, 
+            lastInning[p]!, 
+            currentInningPoints, 
+            runningTotals, 
+            reRackPoints, 
+            inReRackMode, 
+            hasFoul, 
+            result
+         );
+       }
     }
     
     return result;
   }
   
-  String _buildInningNotation(int points, int reRackPoints, bool hasReRack, bool hasFoul) {
-    String notation = '';
-    
-    if (hasReRack) {
-      notation = '$reRackPoints.';
-      if (points > 0) {
-        notation += points.toString();
+  void _finalizeInning(
+      String player,
+      int inning,
+      Map<String, int> currentPoints,
+      Map<String, int> runningTotals,
+      Map<String, int> reRackPoints,
+      Map<String, bool> hasReRack,
+      Map<String, bool> hasFoul,
+      Map<String, Map<int, InningStat>> result
+  ) {
+      int inningScore = currentPoints[player]!;
+      
+      // Special logic: Re-rack points are separate but part of this inning's total?
+      // Usually re-rack means "I scored X, then racked, then scored Y". 
+      // Notation "X.Y".
+      // Log logic accumulated Y into `currentPoints`. X is in `reRackPoints`.
+      // Total Inning Score = X + Y.
+      if (hasReRack[player]!) {
+          inningScore += reRackPoints[player]!;
       }
-    } else {
-      if (points > 0) {
-        notation = points.toString();
+      
+      // Update Running Total
+      runningTotals[player] = runningTotals[player]! + inningScore;
+      
+      // Build Notation
+      String notation = '';
+      if (hasReRack[player]!) {
+          notation = '${reRackPoints[player]}.';
+          // Only show second part if > 0 or if not foul?
+          if (currentPoints[player]! > 0 || (!hasFoul[player]! && currentPoints[player]! != 0)) {
+               notation += currentPoints[player].toString();
+          } else if (currentPoints[player]! < 0) {
+               // Negative points after rerack (foul immediate?)
+               notation += currentPoints[player].toString(); 
+          }
+      } else {
+          notation = inningScore.toString();
+          // If 0, check if Safe or Foul or Miss?
+          // If just 0 and no foul, it's a safe/miss.
+          if (inningScore == 0 && !hasFoul[player]!) {
+              notation = '-'; // or '0'
+          }
       }
-    }
-    
-    if (hasFoul) {
-      notation += 'F';
-    }
-    
-    return notation;
+      
+      if (hasFoul[player]!) {
+          // If notation was just score, append F?
+          // E.g. "5" -> "5F"? Or is F separate?
+          // User said "5.F".
+          // If I score 5 then foul (-1). Inning score is 4.
+          // Notation usually is "Balls Potted".
+          // Let's assume notation tracks "Positive Points" + F?
+          // Or just raw score + F.
+          // Let's stick to "F" suffix strictly.
+          if (notation == '-') notation = '';
+          notation += ' F'; 
+      }
+      
+      result[player]![inning] = InningStat(notation, runningTotals[player]!);
+      
+      // Reset
+      currentPoints[player] = 0;
+      reRackPoints[player] = 0;
+      hasReRack[player] = false;
+      hasFoul[player] = false;
   }
+
+}
+
+class InningStat {
+  final String notation;
+  final int total;
+  InningStat(this.notation, this.total);
+
 }

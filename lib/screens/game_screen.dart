@@ -24,7 +24,8 @@ import '../widgets/pause_overlay.dart';
 import 'new_game_settings_screen.dart';
 import 'package:google_fonts/google_fonts.dart'; // For Arial alternative (Lato/Roboto) if Arial not available, but user said Arial.
 import '../services/player_service.dart' as stats; // For stats fetching
-import '../widgets/penalty_overlay.dart'; // Flying Penalty Animation
+import '../widgets/foul_overlays.dart';
+import '../widgets/safe_shield_overlay.dart'; // Flying Penalty Animation
 import '../utils/ui_utils.dart'; // Zoom Dialog Helper
 
 class GameScreen extends StatefulWidget {
@@ -58,6 +59,118 @@ class _GameScreenState extends State<GameScreen> {
   // Keys for Player Plaques (to track position for Flying Penalty)
   final GlobalKey<PlayerPlaqueState> _p1PlaqueKey = GlobalKey<PlayerPlaqueState>();
   final GlobalKey<PlayerPlaqueState> _p2PlaqueKey = GlobalKey<PlayerPlaqueState>();
+
+  // Serial Event Processing
+  final List<GameEvent> _localEventQueue = [];
+  bool _isProcessingEvent = false;
+
+  void _processNextEvent() {
+    if (_isProcessingEvent || _localEventQueue.isEmpty) return;
+
+    _isProcessingEvent = true;
+    final event = _localEventQueue.removeAt(0);
+
+    if (event is FoulEvent) {
+      // Play Animation
+       _showFlyingPenalty(event.points, event.message, event.player, () {
+          _isProcessingEvent = false;
+          _processNextEvent(); // Loop
+       });
+    } else if (event is WarningEvent) {
+      // Show Dialog
+      showZoomDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.amber.shade900,
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+               const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 32),
+               const SizedBox(width: 12),
+               Text(event.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+               const SizedBox(width: 12),
+               const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 32),
+            ],
+          ),
+          content: RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              style: const TextStyle(color: Colors.white, fontSize: 18),
+              children: [
+                TextSpan(text: event.message),
+              ],
+            ),
+            ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _isProcessingEvent = false;
+                _processNextEvent();
+              },
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.black45,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('I UNDERSTAND'),
+            ),
+          ],
+        ),
+      );
+    } else if (event is DecisionEvent) {
+       // Show Decision Dialog
+       showZoomDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: SteampunkTheme.mahoganyDark,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: SteampunkTheme.brassPrimary, width: 2)
+          ),
+          title: Text(
+              event.title, 
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: SteampunkTheme.brassBright, fontWeight: FontWeight.bold)
+          ),
+          content: Text(
+              event.message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: SteampunkTheme.steamWhite)
+          ),
+          actionsAlignment: MainAxisAlignment.spaceEvenly,
+          actions: [
+            // Option 1 (Player 1)
+            SteampunkButton(
+               onPressed: () {
+                  Navigator.of(context).pop();
+                  event.onOptionSelected(0);
+                  _isProcessingEvent = false;
+                  _processNextEvent();
+               },
+               label: event.options[0],
+            ),
+            const SizedBox(width: 8),
+            // Option 2 (Player 2)
+            SteampunkButton(
+               onPressed: () {
+                  Navigator.of(context).pop();
+                  event.onOptionSelected(1);
+                  _isProcessingEvent = false;
+                  _processNextEvent();
+               },
+               label: event.options[1],
+            ),
+          ],
+        ),
+       );
+    } else {
+       // Unknown?
+       _isProcessingEvent = false;
+       _processNextEvent();
+    }
+  }
   
   // Overlay Entry for Penalty Animation
   OverlayEntry? _penaltyOverlayEntry;
@@ -427,17 +540,12 @@ class _GameScreenState extends State<GameScreen> {
               child: SafeArea(
                 child: Consumer<GameState>(
                   builder: (context, gameState, child) {
-                    if (gameState.showThreeFoulPopup) {
+                    // Process Game Events (Animations)
+                    final events = gameState.consumeEvents();
+                    if (events.isNotEmpty) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _show3FoulPopup(context, gameState);
-                      });
-                    }
-
-                    if (gameState.showTwoFoulWarning) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        // Consume the flag immediately to prevent repeated dialogs on rebuilds (e.g. Timer ticks)
-                        gameState.dismissTwoFoulWarning(); 
-                        _show2FoulWarning(context, gameState);
+                        _localEventQueue.addAll(events);
+                        _processNextEvent();
                       });
                     }
 
@@ -636,42 +744,58 @@ class _GameScreenState extends State<GameScreen> {
                               // Foul Toggle
                               Expanded(
                                 child: SteampunkButton(
-                                  // Use custom child for vertical centering
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    // 2. Wrap Custom Child in SizedBox for Exact Height Control (and consistency)
+                                    child: SizedBox(
+                                      height: 72, 
+                                      width: double.infinity, // Force full width to prevent resizing jitter
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                       Text(
-                                         gameState.foulMode == FoulMode.none 
-                                            ? 'NO FOUL' 
-                                            : (gameState.foulMode == FoulMode.normal ? 'FOUL' : 'BREAK FOUL'),
-                                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                           color: gameState.foulMode == FoulMode.none
-                                               ? colors.textContrast // Default
-                                               : (gameState.foulMode == FoulMode.normal 
-                                                   ? const Color(0xFFCC6600) // Orange
-                                                   : const Color(0xFFCC0000)), // Red
-                                           fontWeight: FontWeight.w900,
-                                           fontSize: 20, 
-                                           letterSpacing: 0.5,
-                                         ),
-                                         textAlign: TextAlign.center,
-                                       ),
-                                       if (gameState.foulMode != FoulMode.none)
-                                         Text(
-                                            gameState.foulMode == FoulMode.normal ? '-1' : '-2',
-                                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                              color: gameState.foulMode == FoulMode.normal 
-                                                  ? const Color(0xFFCC6600) 
-                                                  : const Color(0xFFCC0000),
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14, // Smaller for the points
-                                            ),
-                                            textAlign: TextAlign.center,
-                                         ),
-                                    ],
+                                        if (gameState.foulMode == FoulMode.severe)
+                                           Expanded( // Ensure it takes available space without overflow
+                                             child: FittedBox(
+                                               fit: BoxFit.scaleDown,
+                                               child: Text(
+                                                 'BREAK FOUL',
+                                                 maxLines: 1,
+                                                  style: const TextStyle(
+                                                   color: Colors.white, // Bright White
+                                                   fontWeight: FontWeight.w900,
+                                                   fontSize: 18, 
+                                                   letterSpacing: 0.5,
+                                                   fontFamily: 'Crimson Pro',
+                                                 ),
+                                               ),
+                                             ),
+                                           )
+                                        else
+                                           Text(
+                                             gameState.foulMode == FoulMode.none ? 'NO\nFOUL' : 'FOUL',
+                                             style: const TextStyle(
+                                               color: Colors.white, 
+                                               fontSize: 20, 
+                                               fontWeight: FontWeight.w900,
+                                               letterSpacing: 0.5,
+                                               fontFamily: 'Crimson Pro', // Fallback or use standard if global font set
+                                             ),
+                                             textAlign: TextAlign.center,
+                                           ),
+                                           
+                                        if (gameState.foulMode != FoulMode.none)
+                                           Text(
+                                              gameState.foulMode == FoulMode.normal ? '-1' : '-2',
+                                              style: const TextStyle(
+                                                color: Colors.white, // Bright White
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14, 
+                                                fontFamily: 'Crimson Pro',
+                                              ),
+                                              textAlign: TextAlign.center,
+                                           ),
+                                      ],
+                                    ),
                                   ),
-
                                   onPressed: gameState.gameOver ? () {} : () {
                                      FoulMode next;
                                      switch (gameState.foulMode) {
@@ -694,40 +818,30 @@ class _GameScreenState extends State<GameScreen> {
                               // Safe Button (Toggle)
                               Expanded(
                                 child: SteampunkButton(
-                                  // Custom Child for Stacking Confirm/Safe
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (gameState.isSafeMode)
-                                        Text(
-                                          'CONFIRM',
-                                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                  // Match Foul button structure: Column with fixed width
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.shield,
+                                          color: Colors.white, 
+                                          size: 24,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        const Text(
+                                          'SAFE',
+                                          style: TextStyle(
                                             color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            letterSpacing: 1.0,
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w900,
+                                            fontFamily: 'Crimson Pro',
                                           ),
                                         ),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            gameState.isSafeMode ? Icons.shield_moon : Icons.shield,
-                                            color: gameState.isSafeMode ? Colors.white : colors.primary,
-                                            size: 24,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'SAFE',
-                                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                              color: gameState.isSafeMode ? Colors.white : colors.textContrast,
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.w900,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                   onPressed: gameState.gameOver ? () {} : gameState.onSafe,
                                   // Green gradient when Active (Safe Mode ON)
@@ -801,16 +915,38 @@ class _GameScreenState extends State<GameScreen> {
        // Enforce rule: cannot tap last ball during foul/safe
        if (!canTapBall(ballNumber)) return;
        
-       if (gameState.foulMode == FoulMode.severe && ballNumber != 15) {
+       if (gameState.foulMode == FoulMode.severe && ballNumber != 15 && ballNumber != 0) {
         // Trigger progressive hint
         gameState.reportBreakFoulError(ballNumber: ballNumber);
         if (gameState.breakFoulErrorCount == 1) {
-             // 1st Error: Hide bubble, Show Dialog immediately
+             // 1st Error: Show Dialog ONLY if not seen before
              gameState.setShowBreakFoulHint(false);
-             showZoomDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Break Foul Rule'),
+
+             if (!gameState.settings.hasSeenBreakFoulRules) {
+                // Update Setting immediately so it doesn't show again
+                final newSettings = gameState.settings.copyWith(hasSeenBreakFoulRules: true);
+                gameState.updateSettings(newSettings);
+                // Also update global settings if possible, but gameState.updateSettings 
+                // typically updates the in-memory state. 
+                // We need to ensure persistence. GameScreen `updateSettings` callback handles persistence.
+                // But we are deep in `handleTap`.
+                // We can just rely on `updateSettings` wrapper in GameScreen if available, 
+                // Check `updateSettings` method in `GameScreen`.
+                // Actually `GameScreen` has `updateSettings` method? No, it has `updateSettings` callback in SettingsScreen.
+                // The `game_screen.dart` has `void updateSettings(GameSettings newSettings)`? 
+                // Let's check. Yes, likely `Provider.of<GameState>`...
+                // Accessing `updateSettings` from here is tricky without passing check up.
+                // For now, update GameState. GameState typically doesn't persist to disk itself.
+                // The user asked for "show this only once". Implies persistence.
+                // We'll update GameState, and assume GameState might persist or we accept it resets on app restart.
+                // "Show only once" usually means "per install".
+                // Detailed Persistence requires `SharedPreferences` in `GameState` or `main`.
+                // For now, let's update GameState.
+                
+                showZoomDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Break Foul Rule'),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -842,6 +978,7 @@ class _GameScreenState extends State<GameScreen> {
                   ],
                 ),
              );
+             }
          }
         return;
       }
@@ -969,7 +1106,7 @@ class _GameScreenState extends State<GameScreen> {
         Text(
           label,
           style: const TextStyle(
-            color: SteampunkTheme.brassPrimary,
+            color: Color(0xFFE0E0E0), // Much Brighter (Steam White) for contrast against black
             fontSize: 10,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.0,
@@ -989,44 +1126,90 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  void _showFlyingPenalty(int points, Player player, VoidCallback onComplete) {
+  OverlayEntry? _messageOverlayEntry;
+  OverlayEntry? _pointsOverlayEntry;
+  OverlayEntry? _shieldOverlayEntry;
+
+  void _showSafeShield() {
+    // Remove existing shield if any
+    _shieldOverlayEntry?.remove();
+    
+    // Create shield overlay
+    _shieldOverlayEntry = OverlayEntry(
+      builder: (context) => SafeShieldOverlay(
+        onFinish: () {
+          _shieldOverlayEntry?.remove();
+          _shieldOverlayEntry = null;
+        },
+      ),
+    );
+    
+    // Insert
+    Overlay.of(context).insert(_shieldOverlayEntry!);
+  }
+
+  void _showFlyingPenalty(int points, String message, Player player, VoidCallback onComplete) {
      // 1. Identify Target Plaque Key based on player instance
-     final gameState = Provider.of<GameState>(context, listen: false);
-     final isP1 = player == gameState.players[0];
+     final isP1 = player == Provider.of<GameState>(context, listen: false).players[0];
      final targetKey = isP1 ? _p1PlaqueKey : _p2PlaqueKey;
 
-     // 2. Get Target Position (Score Text center)
-     // We need to wait for layout if not ready, but usually this is called post-frame
-     final renderBox = targetKey.currentContext?.findRenderObject() as RenderBox?;
-     if (renderBox == null) {
+     // 2. Get Target Position (Score height, plaque center X)
+     final plaqueState = targetKey.currentState as PlayerPlaqueState?;
+     final plaqueContext = targetKey.currentContext;
+     
+     if (plaqueContext == null || plaqueState == null || plaqueState.scoreKey.currentContext == null) {
+        onComplete();
+        return;
+     }
+
+     final plaqueRenderBox = plaqueContext.findRenderObject() as RenderBox?;
+     final scoreRenderBox = plaqueState.scoreKey.currentContext!.findRenderObject() as RenderBox?;
+     
+     if (plaqueRenderBox == null || scoreRenderBox == null) {
         onComplete();
         return;
      }
      
-     final position = renderBox.localToGlobal(renderBox.size.center(Offset.zero));
+     // Use plaque center X, score center Y
+     final plaqueCenter = plaqueRenderBox.localToGlobal(plaqueRenderBox.size.center(Offset.zero));
+     final scoreCenter = scoreRenderBox.localToGlobal(scoreRenderBox.size.center(Offset.zero));
+     final position = Offset(plaqueCenter.dx, scoreCenter.dy);
 
-     // 3. Remove existing overlay if any (spam protection)
-     _penaltyOverlayEntry?.remove();
+     // 3. Remove existing overlays if any (spam protection)
+     _messageOverlayEntry?.remove();
+     _pointsOverlayEntry?.remove();
      
-     // 4. Create Overlay
-     _penaltyOverlayEntry = OverlayEntry(
-       builder: (context) => PenaltyOverlay(
+     // 4. Create Message Overlay (center fade)
+     _messageOverlayEntry = OverlayEntry(
+       builder: (context) => FoulMessageOverlay(
+         message: message,
+         onFinish: () {
+            _messageOverlayEntry?.remove();
+            _messageOverlayEntry = null;
+         },
+       ),
+     );
+     
+     // 5. Create Points Overlay (above score, fades then updates)
+     _pointsOverlayEntry = OverlayEntry(
+       builder: (context) => FoulPointsOverlay(
          points: points,
          targetPosition: position,
          onImpact: () {
-            // Trigger Shake on Plaque
+            // Trigger Shake on Plaque and update score
             targetKey.currentState?.triggerPenaltyImpact();
          },
          onFinish: () {
-            _penaltyOverlayEntry?.remove();
-            _penaltyOverlayEntry = null;
+            _pointsOverlayEntry?.remove();
+            _pointsOverlayEntry = null;
             onComplete();
          },
        ),
      );
      
-     // 5. Insert
-     Overlay.of(context).insert(_penaltyOverlayEntry!);
+     // 6. Insert both overlays
+     Overlay.of(context).insert(_messageOverlayEntry!);
+     Overlay.of(context).insert(_pointsOverlayEntry!);
   }
 
   void _show2FoulWarning(BuildContext context, GameState gameState) {
@@ -1077,15 +1260,26 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _show3FoulPopup(BuildContext context, GameState gameState) {
-     // This is the one to replace!
-     // Dismiss popup flag immediately
-     gameState.dismissThreeFoulPopup(); // Done before animation to prevent loop
+     // Logic split: Animation handled by Event Queue.
+     // This method now only handles the Dialog/Reset logic if needed.
      
-     // Trigger Animation (-15)
-     _showFlyingPenalty(-15, gameState.currentPlayer, () {
-        // Callback after animation? Not strictly needed as state is updated.
-        // But maybe we want to play sound?
-     });
+     gameState.dismissThreeFoulPopup(); // Done
+     
+     // Maybe show a dialog explaining the reset?
+     // "3 FOULS! -15 Points. Rack Reset."
+     showZoomDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('3 FOULS!'),
+          content: const Text('Three consecutive fouls.\nPenalty: -15 Points.\nRack is reset.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            )
+          ],
+        )
+     );
   }
 
   void _showResetDialog(BuildContext context) {

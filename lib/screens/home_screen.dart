@@ -48,8 +48,15 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(
         builder: (context) => ChangeNotifierProvider(
           create: (_) => GameState(
-            raceToScore: record.raceToScore,
-            playerNames: [record.player1Name, record.player2Name],
+            settings: GameSettings(
+               raceToScore: record.raceToScore,
+               player1Name: record.player1Name,
+               player2Name: record.player2Name,
+               // Reconstruct other settings from record or defaults if missing in record
+               // Assuming GameRecord stores standard settings:
+               // threeFoulRuleEnabled, etc. might need to be added to GameRecord or defaulted.
+               // For now, assuming defaults or minimal reconstruction.
+            ),
             achievementManager: Provider.of<AchievementManager>(context, listen: false),
           ),
           child: GameScreen(
@@ -75,11 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
             MaterialPageRoute(
               builder: (context) => ChangeNotifierProvider(
                 create: (_) => GameState(
-                  raceToScore: settings.raceToScore,
-                  playerNames: [settings.player1Name, settings.player2Name],
-                  playerHandicaps: [settings.player1Handicap, settings.player2Handicap],
-                  playerHandicapMultipliers: [settings.player1HandicapMultiplier, settings.player2HandicapMultiplier],
-                  threeFoulRuleEnabled: settings.threeFoulRuleEnabled,
+                  settings: settings,
                   achievementManager: Provider.of<AchievementManager>(context, listen: false),
                 ),
                 child: GameScreen(

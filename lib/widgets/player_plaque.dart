@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/player.dart';
 import '../theme/fortune_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:async';
 
 class PlayerPlaque extends StatefulWidget {
   final Player player;
@@ -22,7 +23,14 @@ class PlayerPlaque extends StatefulWidget {
 class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderStateMixin {
   late AnimationController _effectController;
   late Animation<Offset> _shakeAnimation;
-  late Animation<Color?> _flashAnimation;
+  late Animation<double> _scaleAnimation;
+  
+  // UI Logic: Visual Score (delayed update)
+  late int _visualScore;
+  Timer? _safetyTimer;
+  
+  // Key for Animation Targeting
+  final GlobalKey scoreKey = GlobalKey();
 
   @override
   void initState() {
@@ -39,14 +47,45 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
       TweenSequenceItem(tween: Tween(begin: const Offset(5, 0), end: Offset.zero), weight: 1),
     ]).animate(CurvedAnimation(parent: _effectController, curve: Curves.easeInOut));
     
-    // Flash: Red tint
-    _flashAnimation = ColorTween(
-      begin: null, 
-      end: Colors.redAccent
-    ).animate(CurvedAnimation(
-      parent: _effectController, 
-      curve: const Interval(0.0, 0.5, curve: Curves.easeIn) // Flash fast, fade slower
+    // Scale: Bump up
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.3), weight: 1), // Grow
+      TweenSequenceItem(tween: Tween(begin: 1.3, end: 1.0), weight: 2), // Shrink back
+    ]).animate(CurvedAnimation(
+      parent: _effectController,
+      curve: Curves.elasticOut,
     ));
+    
+    _visualScore = widget.player.score; // Init with current
+  }
+
+  @override
+  void didUpdateWidget(PlayerPlaque oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    if (widget.player.score != oldWidget.player.score) {
+      if (widget.player.score < oldWidget.player.score) {
+        // Score Dropped (Penalty?) -> DEFER UPDATE
+        // We wait for triggerPenaltyImpact() to call sync.
+        
+        // Safety: If animation never comes, sync after 3s
+        _safetyTimer?.cancel();
+        _safetyTimer = Timer(const Duration(seconds: 3), () {
+          if (mounted && _visualScore != widget.player.score) {
+            setState(() {
+              _visualScore = widget.player.score;
+            });
+          }
+        });
+      } else {
+        // Score Increased (Pot/Points) -> Update Immediately (or animate differently later)
+        if (_visualScore != widget.player.score) {
+          setState(() {
+            _visualScore = widget.player.score;
+          });
+        }
+      }
+    }
   }
 
   @override
@@ -55,9 +94,17 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
     super.dispose();
   }
 
-  // Exposed method to trigger effect
+  // Exposed method to trigger effect AND update score
   void triggerPenaltyImpact() {
     _effectController.forward(from: 0.0);
+    
+    // Award the score (Sync visual to actual)
+    if (_visualScore != widget.player.score) {
+      setState(() {
+        _visualScore = widget.player.score;
+      });
+    }
+    _safetyTimer?.cancel();
   }
 
   @override
@@ -74,10 +121,9 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
     return AnimatedBuilder(
       animation: _effectController,
       builder: (context, child) {
-        final flashColor = _flashAnimation.value;
-        // If flashing, use red. Else use normal theme logic.
-        final nameColor = flashColor ?? (isActive ? colors.primaryBright : colors.primary);
-        final scoreColor = flashColor ?? colors.accent;
+        // Score Color: Always Golden (no flash)
+        final nameColor = isActive ? colors.primaryBright : colors.primary;
+        const scoreColor = Color(0xFFFFD700); // Standard Gold always
 
         return Transform.translate(
           offset: _shakeAnimation.value,
@@ -115,13 +161,7 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
                       blurRadius: 12,
                       spreadRadius: 2,
                     ),
-                  // Penalty Glow!
-                  if (flashColor != null)
-                     BoxShadow(
-                      color: Colors.red.withOpacity(0.8),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
+                  // Penalty Glow removed (no flash)
                 ],
                 // Subtle gradient
                 gradient: LinearGradient(
@@ -162,9 +202,12 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
                       crossAxisAlignment: CrossAxisAlignment.baseline,
                       textBaseline: TextBaseline.alphabetic,
                       children: [
-                        Text(
-                          '${widget.player.score}',
-                          style: GoogleFonts.nunito(
+                        Transform.scale(
+                          scale: _scaleAnimation.value,
+                          child: Text(
+                            key: scoreKey,
+                            '$_visualScore',
+                            style: GoogleFonts.nunito(
                             textStyle: theme.textTheme.displayMedium,
                             color: scoreColor,
                             fontSize: 42,
@@ -176,7 +219,7 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
                                 blurRadius: 10,
                               ),
                             ],
-                          ),
+                          ),),
                         ),
                         const SizedBox(width: 8),
                         Text(

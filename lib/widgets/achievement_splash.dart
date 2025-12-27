@@ -78,9 +78,7 @@ class _AchievementSplashState extends State<AchievementSplash>
   Widget build(BuildContext context) {
     return Material(
       color: Colors.black87,
-      child: GestureDetector(
-        onTap: widget.onDismiss,
-        child: Stack(
+      child: Stack(
           children: [
             // Confetti from top center
             Align(
@@ -101,6 +99,21 @@ class _AchievementSplashState extends State<AchievementSplash>
                   Colors.purple,
                   Colors.orange,
                 ],
+              ),
+            ),
+
+            // Close Button (Top Right)
+            Positioned(
+              top: 50,
+              right: 20,
+              child: Material(
+                color: Colors.transparent,
+                shape: const CircleBorder(),
+                child: IconButton(
+                   icon: const Icon(Icons.close, color: Colors.white, size: 32),
+                   onPressed: widget.onDismiss,
+                   tooltip: 'Close',
+                ),
               ),
             ),
             
@@ -171,15 +184,6 @@ class _AchievementSplashState extends State<AchievementSplash>
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 24),
-                          const Text(
-                            'Tap to continue',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white60,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -189,7 +193,6 @@ class _AchievementSplashState extends State<AchievementSplash>
             ),
           ],
         ),
-      ),
     );
   }
 }

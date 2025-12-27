@@ -4,10 +4,38 @@ import 'player.dart';
 import 'foul_tracker.dart';
 import 'achievement_manager.dart';
 import '../data/messages.dart';
+import 'game_settings.dart';
 
 enum FoulMode { none, normal, severe }
 
+// Event System for UI Animations
+abstract class GameEvent {}
+
+class FoulEvent extends GameEvent {
+  final Player player;
+  final int points;
+  final String message;
+  FoulEvent(this.player, this.points, this.message);
+}
+
+class WarningEvent extends GameEvent {
+  final String title;
+  final String message;
+  WarningEvent(this.title, this.message);
+}
+
+class DecisionEvent extends GameEvent {
+  final String title;
+  final String message;
+  final List<String> options;
+  final Function(int) onOptionSelected;
+
+  DecisionEvent(this.title, this.message, this.options, this.onOptionSelected);
+}
+
+
 class GameState extends ChangeNotifier {
+  GameSettings settings;
   int raceToScore;
   late List<Player> players;
   late FoulTracker foulTracker;
@@ -41,6 +69,10 @@ class GameState extends ChangeNotifier {
   // Undo/Redo Stacks
   final List<GameSnapshot> _undoStack = [];
   final List<GameSnapshot> _redoStack = [];
+
+  // UI Event Queue (Consumed by UI)
+  final List<GameEvent> eventQueue = [];
+
 
   bool get canUndo => _undoStack.isNotEmpty;
   
@@ -112,26 +144,26 @@ class GameState extends ChangeNotifier {
   }
 
   GameState({
-    required this.raceToScore,
-    required List<String> playerNames,
-    List<int> playerHandicaps = const [0, 0],
-    List<double> playerHandicapMultipliers = const [1.0, 1.0], // New
-    bool threeFoulRuleEnabled = true,
+    required this.settings,
     this.achievementManager,
-  }) {
-    players = List.generate(playerNames.length, (index) {
-      final handicap = (index < playerHandicaps.length) ? playerHandicaps[index] : 0;
-      final multiplier = (index < playerHandicapMultipliers.length) ? playerHandicapMultipliers[index] : 1.0;
-      return Player(
-        name: playerNames[index], 
+  }) : raceToScore = settings.raceToScore {
+    // Initialize Players
+    players = [
+      Player(
+        name: settings.player1Name, 
+        isActive: true, // P1 starts active by default
+        score: settings.player1Handicap,
+        handicapMultiplier: settings.player1HandicapMultiplier
+      ),
+      Player(
+        name: settings.player2Name, 
         isActive: false, 
-        score: handicap,
-        handicapMultiplier: multiplier,
-      );
-    });
+        score: settings.player2Handicap,
+        handicapMultiplier: settings.player2HandicapMultiplier
+      )
+    ];
 
-    players[0].isActive = true;
-    foulTracker = FoulTracker(threeFoulRuleEnabled: threeFoulRuleEnabled);
+    foulTracker = FoulTracker(threeFoulRuleEnabled: settings.threeFoulRuleEnabled);
     _resetRack();
   }
 
@@ -334,12 +366,13 @@ class GameState extends ChangeNotifier {
     // Safety check: specific case for "Re-Rack" scenarios might act oddly, 
     // but assuming standard 15-ball to 0-ball flow.
     
+    // Safe Mode Logic: Defensive Pocket
     if (isSafeMode) {
       isSafeMode = false; // Consume mode
       
       // If points > 0, we pocketed balls defensively
       if (points > 0) {
-        // Apply Handicap Multiplier to positive points
+        // Apply Handicap Multiplier to positive points (Defensive Pocket counts as positive score)
         final scoredPoints = (points * currentPlayer.handicapMultiplier).round();
         currentPlayer.addScore(scoredPoints);
         currentPlayer.incrementSaves(); 
@@ -373,11 +406,70 @@ class GameState extends ChangeNotifier {
       final penalty = foulTracker.applyNormalFoul(currentPlayer); // Use current Player
       currentPlayer.addScore(penalty);
       foulText = penalty == -15 ? ' (3-Foul!)' : ' (Foul)';
-      if (penalty == -15) showThreeFoulPopup = true;
+      
+      // Queue Event for Animation
+      if (penalty == -15) {
+        // 3-Foul! Queue the big one.
+        eventQueue.add(FoulEvent(currentPlayer, -15, "Triple Foul!"));
+        showThreeFoulPopup = true; // State persistence only
+        // Queue the Dialog as an Event for proper sequencing
+        eventQueue.add(WarningEvent(
+           "3 FOULS!", 
+           "Three consecutive fouls.\nPenalty: -15 Points."
+        ));
+      } else {
+        eventQueue.add(FoulEvent(currentPlayer, penalty, "Foul!")); // Usually -1
+      }
     } else if (currentFoulMode == FoulMode.severe) {
       final penalty = foulTracker.applySevereFoul(currentPlayer); // Use current Player
       currentPlayer.addScore(penalty);
       foulText = ' (Break Foul)';
+      
+      // SHOW BREAK FOUL RULES ONCE
+      if (!settings.hasSeenBreakFoulRules) {
+        settings = settings.copyWith(hasSeenBreakFoulRules: true); // Update in-memory settings
+        // Note: Persistence happens via UI callback usually, but since GameSettings is now in 
+        // GameState, we rely on the main update loop or when saving game to persist.
+        // Queue the Rules Dialog
+        eventQueue.add(WarningEvent(
+          "Important Break Foul Rules",
+          "• You CAN commit Break Foul again\n• The 3-Foul rule does NOT apply\n• Each Break Foul is -2 points\n• Only Ball 15 ends the turn"
+        ));
+      }
+
+      eventQueue.add(FoulEvent(currentPlayer, penalty, "Break Foul!")); // Usually -2
+      
+      // Break Foul Decision: Who breaks next?
+      // Use local variable capture for safe closure
+      final p1 = players[0];
+      final p2 = players[1];
+      
+      eventQueue.add(DecisionEvent(
+        "WHO BREAKS NEXT?", 
+        "Break Foul Rule: Decide who takes the next break shot.",
+        [p1.name, p2.name],
+        (selectedIndex) {
+             // 0 = P1, 1 = P2
+             final selectedPlayer = selectedIndex == 0 ? p1 : p2;
+             
+             // Logic: Set Active Player to selected
+             // If selected is currently active, DO NOT switch.
+             // If selected is NOT active, DO switch.
+             if (currentPlayer != selectedPlayer) {
+                _switchPlayer(); 
+             }
+             
+             // Ensure Rack is Reset for the Break
+             _updateRackCount(15);
+             notifyListeners();
+        }
+      ));
+      
+      // Prevent standard switchPlayer at end of 'onBallTapped' 
+      // We handle turn switching in the callback above. 
+      // But 'onBallTapped' is void and continues... 
+      // The current logic calls `_switchPlayer()` at the END of onBallTapped typically?
+      // Wait, let's check lines 460+
     } else {
       // Valid Shot
       currentPlayer.consecutiveFouls = 0; // Reset consecutive fouls on valid shot/safe
@@ -458,7 +550,12 @@ class GameState extends ChangeNotifier {
         currentPlayer.incrementSaves(); 
       }
     } else {
-      turnEnded = true; // Foul always ends turn
+      if (currentFoulMode == FoulMode.severe) {
+        // Break Foul: Turn switch is handled by DecisionEvent callback
+        turnEnded = false; 
+      } else {
+        turnEnded = true; // Normal Foul always ends turn
+      }
     }
 
     // BREAK FOUL SEQUENCE LOGIC
@@ -580,10 +677,21 @@ class GameState extends ChangeNotifier {
 
     // Check for 2-Foul Warning upon entering turn
     if (foulTracker.threeFoulRuleEnabled && currentPlayer.consecutiveFouls == 2) {
-      showTwoFoulWarning = true;
+      // Replaced showTwoFoulWarning flag with Event
+      eventQueue.add(WarningEvent(
+         "2 FOULS!", 
+         "You are on 2 consecutive fouls.\nOne more foul will result in a \n-15 points penalty!"
+      ));
     }
 
     notifyListeners();
+  }
+
+  // Method to consume events (UI calls this)
+  List<GameEvent> consumeEvents() {
+    final events = List<GameEvent>.from(eventQueue);
+    eventQueue.clear();
+    return events;
   }
 
   // Allow swapping starting player before game starts

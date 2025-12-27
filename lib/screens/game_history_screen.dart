@@ -276,8 +276,11 @@ class _GameHistoryScreenState extends State<GameHistoryScreen> {
                 MaterialPageRoute(
                   builder: (context) => ChangeNotifierProvider(
                     create: (_) => GameState(
-                      raceToScore: game.raceToScore,
-                      playerNames: [game.player1Name, game.player2Name],
+                      settings: GameSettings(
+                        raceToScore: game.raceToScore,
+                        player1Name: game.player1Name, 
+                        player2Name: game.player2Name,
+                      ),
                       achievementManager: Provider.of<AchievementManager>(context, listen: false),
                     ),
                     child: GameScreen(
@@ -291,8 +294,11 @@ class _GameHistoryScreenState extends State<GameHistoryScreen> {
             } else {
                // Reconstruct state for verification/details
                final tempState = GameState(
-                 raceToScore: game.raceToScore,
-                 playerNames: [game.player1Name, game.player2Name],
+                 settings: GameSettings(
+                    raceToScore: game.raceToScore,
+                    player1Name: game.player1Name, 
+                    player2Name: game.player2Name,
+                 ),
                  achievementManager: Provider.of<AchievementManager>(context, listen: false),
                );
                
