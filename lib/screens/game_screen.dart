@@ -617,19 +617,67 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
                     return Column(
                       children: [
-                        // Race to XX indicator
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Text(
-                            'Race to ${gameState.raceToScore}',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: colors.primary,
-                              fontWeight: FontWeight.bold,
-                              shadows: [
-                                const Shadow(blurRadius: 2, color: Colors.black, offset: Offset(1, 1)),
+                        // Race to XX / Inning Counter - Fades from prominent to compact
+                        AnimatedOpacity(
+                          opacity: !gameState.gameStarted ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 800),
+                          child: !gameState.gameStarted ? Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'Race to ${gameState.raceToScore}',
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                color: colors.accent,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 32,
+                                shadows: [
+                                  Shadow(blurRadius: 4, color: Colors.black, offset: Offset(2, 2)),
+                                  Shadow(blurRadius: 8, color: colors.accent.withOpacity(0.6)),
+                                ],
+                              ),
+                            ),
+                          ) : const SizedBox.shrink(),
+                        ),
+                        AnimatedOpacity(
+                          opacity: gameState.gameStarted ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 800),
+                          child: gameState.gameStarted ? Container(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Left: Inning label
+                                Text(
+                                  'Inning: ',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    color: colors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                // Center: Inning number (larger, prominent)
+                                Text(
+                                  '${gameState.currentInning}',
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    color: colors.accent,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 24,
+                                    shadows: [
+                                      Shadow(blurRadius: 3, color: Colors.black, offset: Offset(1, 1)),
+                                    ],
+                                  ),
+                                ),
+                                // Spacer
+                                const SizedBox(width: 24),
+                                // Right: Race to (smaller)
+                                Text(
+                                  'Race to ${gameState.raceToScore}',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    color: colors.primary.withOpacity(0.8),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ],
                             ),
-                          ),
+                          ) : const SizedBox.shrink(),
                         ),
                         // 1. Players & Scores Header
                         Container(
