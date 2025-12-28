@@ -4,12 +4,10 @@ import '../models/game_settings.dart' hide Player;
 import '../services/settings_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/steampunk_theme.dart';
-import '../theme/fortune_theme.dart';
 import '../widgets/steampunk_widgets.dart';
 import 'package:provider/provider.dart';
 import '../models/achievement_manager.dart';
 import '../services/player_service.dart';
-import '../widgets/player_name_input_dialog.dart';
 
 
 class SettingsScreen extends StatefulWidget {
@@ -53,7 +51,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final fortuneTheme = FortuneColors.of(context);
     
     // Helper to build a control panel section
     Widget buildSectionHeader(String title, IconData icon) {
@@ -61,17 +58,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         margin: const EdgeInsets.only(top: 24, bottom: 8),
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
-          color: fortuneTheme.secondary.withOpacity(0.3),
-          border: Border(bottom: BorderSide(color: fortuneTheme.primary, width: 2)),
+          color: SteampunkTheme.brassDark.withOpacity(0.3),
+          border: Border(bottom: BorderSide(color: SteampunkTheme.brassPrimary, width: 2)),
         ),
         child: Row(
           children: [
-            Icon(icon, color: fortuneTheme.primary),
+            Icon(icon, color: SteampunkTheme.brassPrimary),
             const SizedBox(width: 12),
             Text(
               title.toUpperCase(),
               style: theme.textTheme.labelLarge?.copyWith(
-                color: fortuneTheme.primary,
+                color: SteampunkTheme.brassPrimary,
                 letterSpacing: 2.0,
               ),
             ),
@@ -85,7 +82,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         margin: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
           color: Colors.black26,
-          border: Border.all(color: fortuneTheme.secondary.withOpacity(0.3)),
+          border: Border.all(color: SteampunkTheme.brassDark.withOpacity(0.3)),
           borderRadius: BorderRadius.circular(4),
         ),
         child: child,
@@ -103,14 +100,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        iconTheme: IconThemeData(color: fortuneTheme.primary),
+        iconTheme: IconThemeData(color: SteampunkTheme.brassPrimary),
         actions: [
           Stack(
             alignment: Alignment.center,
             children: [
               IconButton(
                 icon: const Icon(Icons.save),
-                color: fortuneTheme.primary,
+                color: SteampunkTheme.brassBright,
                 onPressed: _saveSettings,
                 tooltip: 'Save Configuration',
               ),
@@ -151,7 +148,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: ListTile(
                   title: Text(l10n.raceToScore, style: theme.textTheme.bodyLarge),
                   subtitle: Text('${_settings.raceToScore} ${l10n.points}', style: theme.textTheme.bodySmall),
-                  trailing: Icon(Icons.edit, color: fortuneTheme.primary),
+                  trailing: Icon(Icons.edit, color: SteampunkTheme.brassPrimary),
                   onTap: () => _editRaceToScore(),
                 ),
               ),
@@ -161,7 +158,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: ListTile(
                   title: Text(l10n.player1, style: theme.textTheme.bodyLarge),
                   subtitle: Text(_settings.player1Name, style: theme.textTheme.displaySmall?.copyWith(fontSize: 18)),
-                  trailing: Icon(Icons.edit, color: fortuneTheme.primary),
+                  trailing: Icon(Icons.edit, color: SteampunkTheme.brassPrimary),
                   onTap: () => _editPlayerName(1),
                 ),
               ),
@@ -169,7 +166,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: ListTile(
                   title: Text(l10n.player2, style: theme.textTheme.bodyLarge),
                   subtitle: Text(_settings.player2Name, style: theme.textTheme.displaySmall?.copyWith(fontSize: 18)),
-                  trailing: Icon(Icons.edit, color: fortuneTheme.primary),
+                  trailing: Icon(Icons.edit, color: SteampunkTheme.brassPrimary),
                   onTap: () => _editPlayerName(2),
                 ),
               ),
@@ -182,8 +179,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: Text(l10n.threeFoulRule, style: theme.textTheme.bodyLarge),
                   subtitle: Text(l10n.threeFoulRuleSubtitle, style: theme.textTheme.bodySmall),
                   value: _settings.threeFoulRuleEnabled,
-                  activeColor: fortuneTheme.accent,
-                  activeTrackColor: fortuneTheme.secondary,
+                  activeColor: SteampunkTheme.amberGlow,
+                  activeTrackColor: SteampunkTheme.brassDark,
                   inactiveThumbColor: Colors.grey,
                   inactiveTrackColor: Colors.black,
                   onChanged: (value) {
@@ -200,11 +197,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: Text(l10n.soundEffects, style: theme.textTheme.bodyLarge),
                   subtitle: Text(l10n.enableGameSounds, style: theme.textTheme.bodySmall),
                   value: _settings.soundEnabled,
-                  activeColor: fortuneTheme.accent,
-                   activeTrackColor: fortuneTheme.secondary,
+                  activeColor: SteampunkTheme.amberGlow,
+                   activeTrackColor: SteampunkTheme.brassDark,
                   secondary: Icon(
                     _settings.soundEnabled ? Icons.volume_up : Icons.volume_off,
-                    color: _settings.soundEnabled ? fortuneTheme.primary : Colors.grey,
+                    color: _settings.soundEnabled ? SteampunkTheme.brassPrimary : Colors.grey,
                   ),
                   onChanged: (value) {
                     setState(() {
@@ -240,9 +237,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       max: 100,
                       divisions: 18, // Steps of 5 (approx)
                       label: '${_settings.maxInnings}',
-                      activeColor: fortuneTheme.accent,
-                      inactiveColor: fortuneTheme.secondary.withOpacity(0.3),
-                      thumbColor: fortuneTheme.primary,
+                      activeColor: SteampunkTheme.amberGlow,
+                      inactiveColor: SteampunkTheme.brassDark.withOpacity(0.3),
+                      thumbColor: SteampunkTheme.brassPrimary,
                       onChanged: (value) {
                         setState(() {
                           _settings = _settings.copyWith(maxInnings: value.round());
@@ -309,7 +306,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       title: Text(l10n.german, style: theme.textTheme.bodyMedium),
                       value: 'de',
                       groupValue: _settings.languageCode,
-                      activeColor: fortuneTheme.accent,
+                      activeColor: SteampunkTheme.amberGlow,
                       onChanged: (value) {
                         setState(() {
                           _settings = _settings.copyWith(languageCode: value);
@@ -320,7 +317,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       title: Text(l10n.english, style: theme.textTheme.bodyMedium),
                       value: 'en',
                       groupValue: _settings.languageCode,
-                      activeColor: fortuneTheme.accent,
+                      activeColor: SteampunkTheme.amberGlow,
                       onChanged: (value) {
                         setState(() {
                           _settings = _settings.copyWith(languageCode: value);
@@ -376,18 +373,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   decoration: BoxDecoration(
                     color: Colors.black45,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: fortuneTheme.secondary, width: 2),
+                    border: Border.all(color: SteampunkTheme.brassDark, width: 2),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.info_outline, color: fortuneTheme.primary, size: 20),
+                          const Icon(Icons.info_outline, color: SteampunkTheme.brassPrimary, size: 20),
                           const SizedBox(width: 8),
                           Text(
                             '3-FOUL PROTOCOL',
-                            style: theme.textTheme.labelLarge?.copyWith(color: fortuneTheme.primary),
+                            style: theme.textTheme.labelLarge?.copyWith(color: SteampunkTheme.brassBright),
                           ),
                         ],
                       ),
@@ -521,13 +518,119 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _editPlayerName(int playerNumber) async {
     final l10n = AppLocalizations.of(context);
     final currentName = playerNumber == 1 ? _settings.player1Name : _settings.player2Name;
+    final controller = TextEditingController(text: currentName);
+    Player? selectedPlayer;
     
-    final finalName = await PlayerNameInputDialog.show(
-      context,
-      title: playerNumber == 1 ? l10n.player1 : l10n.player2,
-      initialName: currentName,
-      labelText: l10n.playerName,
-      hintText: 'Enter or select player',
+    final finalName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            // Check if current text matches a player
+            selectedPlayer = _players.cast<Player?>().firstWhere(
+              (p) =>  p?.name.toLowerCase() == controller.text.trim().toLowerCase(),
+              orElse: () => null,
+            );
+            
+            return AlertDialog(
+              title: Text(playerNumber == 1 ? l10n.player1 : l10n.player2),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Autocomplete<String>(
+                  initialValue: TextEditingValue(text: currentName),
+                  optionsBuilder: (textEditingValue) {
+                    if (textEditingValue.text.isEmpty) {
+                      return const Iterable<String>.empty();
+                    }
+                    return _players
+                        .map((p) => p.name)
+                        .where((name) => name.toLowerCase().contains(
+                            textEditingValue.text.toLowerCase()));
+                  },
+                  onSelected: (name) {
+                    controller.text = name;
+                    setDialogState(() {});
+                  },
+                  fieldViewBuilder: (context, fieldController, focusNode, onSubmitted) {
+                    // Sync our controller with the autocomplete's
+                    if (fieldController.text != controller.text) {
+                      fieldController.text = controller.text;
+                    }
+                    
+                    fieldController.addListener(() {
+                      controller.text = fieldController.text;
+                      setDialogState(() {});
+                    });
+                    
+                    return TextField(
+                      controller: fieldController,
+                      focusNode: focusNode,
+                      maxLength: 30,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                      textCapitalization: TextCapitalization.words,
+                      contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
+                      decoration: InputDecoration(
+                        labelText: l10n.playerName,
+                        hintText: 'Enter or select player',
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        counterText: '',
+                        suffixIcon: selectedPlayer != null
+                            ? const Icon(Icons.check_circle, color: Colors.green)
+                            : (fieldController.text.trim().isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.add_circle, color: Colors.blue),
+                                    tooltip: 'Create Player',
+                                    onPressed: () async {
+                                      final name = fieldController.text.trim();
+                                      if (name.isEmpty) return;
+                                      
+                                      try {
+                                        await _playerService.createPlayer(name);
+                                        await _loadPlayers();
+                                        
+                                        setDialogState(() {});
+                                        
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Player "$name" created ✓')),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+                                          );
+                                        }
+                                      }
+                                    },
+                                  )
+                                : null),
+                      ),
+                      onSubmitted: (_) => Navigator.pop(dialogContext, controller.text.trim()),
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (controller.text.trim().isNotEmpty) {
+                      Navigator.pop(dialogContext, controller.text.trim());
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
 
     if (finalName != null && finalName != currentName && finalName.isNotEmpty) {
@@ -539,6 +642,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       });
     }
+    
+    controller.dispose();
   }
 
   Future<void> _saveSettings() async {
@@ -553,12 +658,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       Navigator.pop(context);
     }
   }
-  Widget _buildMultiplierSelector(double current, Function(double) onChanged) {`r`n    final fortuneTheme = FortuneColors.of(context);
+  Widget _buildMultiplierSelector(double current, Function(double) onChanged) {
     return Container(
       decoration: BoxDecoration(
-        color: fortuneTheme.secondary.withOpacity(0.5),
+        color: SteampunkTheme.brassDark.withOpacity(0.5),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: fortuneTheme.primary.withOpacity(0.3)),
+        border: Border.all(color: SteampunkTheme.brassPrimary.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -569,13 +674,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected ? fortuneTheme.accent : Colors.transparent,
+                color: isSelected ? SteampunkTheme.amberGlow : Colors.transparent,
                 borderRadius: BorderRadius.circular(2),
               ),
               child: Text(
                 '${val.toInt()}x',
                 style: TextStyle(
-                  color: isSelected ? Colors.black : fortuneTheme.primary,
+                  color: isSelected ? Colors.black : SteampunkTheme.brassBright,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
