@@ -383,7 +383,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.info_outline, color: fortuneTheme.primaryAccent, size: 20),
+                          Icon(Icons.info_outline, color: fortuneTheme.primaryAccent, size: 20),
                           const SizedBox(width: 8),
                           Text(
                             '3-FOUL PROTOCOL',
