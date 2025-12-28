@@ -169,6 +169,10 @@ class _FoulPointsOverlayState extends State<FoulPointsOverlay> with SingleTicker
         double left = widget.targetPosition.dx - 100;
         left = left.clamp(0.0, screenWidth - 200.0);
         
+        // Dynamic font sizing based on screen width
+        final baseFontSize = screenWidth < 400 ? 60.0 : 72.0;
+        final singleFontSize = screenWidth < 400 ? 72.0 : 84.0;
+        
         return Positioned(
           left: left, 
           top: widget.targetPosition.dy - 16, // Align with score
@@ -188,27 +192,33 @@ class _FoulPointsOverlayState extends State<FoulPointsOverlay> with SingleTicker
                             mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(
-                                '+${widget.positivePoints}',
-                                style: GoogleFonts.nunito(
-                                  fontSize: 72,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.greenAccent,
-                                  shadows: [
-                                    const Shadow(blurRadius: 4, color: Colors.black, offset: Offset(1, 1)),
-                                  ],
+                              Flexible(
+                                child: Text(
+                                  '+${widget.positivePoints}',
+                                  style: GoogleFonts.nunito(
+                                    fontSize: baseFontSize,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.greenAccent,
+                                    shadows: [
+                                      const Shadow(blurRadius: 4, color: Colors.black, offset: Offset(1, 1)),
+                                    ],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                '${widget.penalty}', // Already has minus sign
-                                style: GoogleFonts.nunito(
-                                  fontSize: 72,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.redAccent,
-                                  shadows: [
-                                    const Shadow(blurRadius: 4, color: Colors.black, offset: Offset(1, 1)),
-                                  ],
+                              Flexible(
+                                child: Text(
+                                  '${widget.penalty}', // Already has minus sign
+                                  style: GoogleFonts.nunito(
+                                    fontSize: baseFontSize,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.redAccent,
+                                    shadows: [
+                                      const Shadow(blurRadius: 4, color: Colors.black, offset: Offset(1, 1)),
+                                    ],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -220,7 +230,7 @@ class _FoulPointsOverlayState extends State<FoulPointsOverlay> with SingleTicker
                               '${widget.points >= 0 ? "+" : ""}${widget.points}',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.nunito(
-                                fontSize: 84,
+                                fontSize: singleFontSize,
                                 fontWeight: FontWeight.w900,
                                 color: widget.points >= 0 ? Colors.greenAccent : Colors.redAccent,
                                 shadows: [

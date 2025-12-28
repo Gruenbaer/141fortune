@@ -14,8 +14,8 @@ class Player {
     this.isActive = false,
     this.saves = 0,
     this.consecutiveFouls = 0,
-    this.handicapMultiplier = 1.0,
-  });
+    double handicapMultiplier = 1.0,
+  }) : handicapMultiplier = handicapMultiplier.clamp(0.1, 10.0); // Defensive: prevent 0x or extreme values
 
   void addScore(int points) {
     score += points;
@@ -45,7 +45,7 @@ class Player {
       isActive: isActive ?? this.isActive,
       saves: saves ?? this.saves,
       consecutiveFouls: consecutiveFouls ?? this.consecutiveFouls,
-      handicapMultiplier: handicapMultiplier ?? this.handicapMultiplier,
+      handicapMultiplier: (handicapMultiplier ?? this.handicapMultiplier).clamp(0.1, 10.0),
     );
   }
   Map<String, dynamic> toJson() => {
