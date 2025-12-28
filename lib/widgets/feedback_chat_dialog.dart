@@ -5,10 +5,12 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
-import 'package:mailer/smtp_server.dart';
+import 'dart:convert';
 import '../build_env.dart';
 import '../constants/qa_handbook.dart';
-import '../theme/fortune_theme.dart'; // Import Handbook
+import '../theme/fortune_theme.dart';
+import '../models/issue_data.dart';
+import '../services/issue_generator_service.dart';
 
 // -----------------------------------------------------------------------------
 // CONFIGURATION
@@ -41,6 +43,12 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
   
   // Flow Control
   ChatFlowState _flowState = ChatFlowState.chatting;
+
+  // Issue Detection
+  IssueData? _detectedIssue;
+  String? _issueType; // 'bug' or 'feature'
+  final IssueGeneratorService _issueService = IssueGeneratorService();
+  bool _isCreatingIssue = false;
 
   // Rate limiting for API calls
   DateTime? _lastApiCall;
@@ -223,6 +231,30 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
         final response = await _chatSession!.sendMessage(Content.text(text));
         final responseText = response.text ?? "Ich habe gerade Schwierigkeiten beim Denken.";
         
+        // Try to parse JSON for issue detection
+        try {
+          if (responseText.contains('{') && responseText.contains('"type"')) {
+            final jsonStart = responseText.indexOf('{');
+            final jsonEnd = responseText.lastIndexOf('}') + 1;
+            final jsonStr = responseText.substring(jsonStart, jsonEnd);
+            final json = jsonDecode(jsonStr) as Map<String, dynamic>;
+            
+            if (json['type'] == 'bug') {
+              setState(() {
+                _issueType = 'bug';
+                _detectedIssue = BugData.fromJson(json);
+              });
+            } else if (json['type'] == 'feature') {
+              setState() {
+                _issueType = 'feature';
+                _detectedIssue = FeatureData.fromJson(json);
+              });
+            }
+          }
+        } catch (jsonError) {
+          // Not JSON or parsing failed - continue normally
+        }
+        
         // Detect Summary -> Switch Flow
         if (responseText.toUpperCase().contains("ZUSAMMENFASSUNG:")) {
            _synopsis = responseText;
@@ -235,9 +267,14 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
            setState(() => _flowState = ChatFlowState.askingEmailConsent);
         }
         
-        _addBotMessage(responseText);
+        // Show non-JSON part of response
+        final displayText = responseText.contains('{') 
+            ? responseText.substring(0, responseText.indexOf('{')).trim()
+            : responseText;
+        if (displayText.isNotEmpty) {
+          _addBotMessage(displayText);
+        }
       } catch (e) {
-        debugPrint("AI Error: $e");
         debugPrint("AI Error: $e");
         _addBotMessage("Fehler: $e");
       }
@@ -335,6 +372,95 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
       debugPrint("Email Error: $e");
       _addBotMessage("⚠️ Fehler beim Senden: $e");
     }
+  }
+
+  void _showIssueConfirmation() {
+    if (_detectedIssue == null) return;
+    
+    // Temporary controllers for the dialog
+    final titleCtrl = TextEditingController(text: _detectedIssue!.title);
+    final descCtrl = TextEditingController(text: _detectedIssue!.description);
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: FortuneColors.of(context).backgroundCard,
+        title: Text(
+          _issueType == 'bug' ? '🐛 Create Bug Report' : '✨ Request Feature',
+          style: GoogleFonts.rye(color: FortuneColors.of(context).textMain),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: InputDecoration(labelText: 'Title', labelStyle: GoogleFonts.nunito(color: Colors.white70)),
+                style: GoogleFonts.nunito(color: Colors.white),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: descCtrl,
+                decoration: InputDecoration(labelText: 'Description', labelStyle: GoogleFonts.nunito(color: Colors.white70)),
+                style: GoogleFonts.nunito(color: Colors.white),
+                maxLines: 5,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: FortuneColors.of(context).primary),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              setState(() => _isCreatingIssue = true);
+              _addBotMessage("Creating issue file...");
+              
+              try {
+                String path;
+                if (_issueType == 'bug' && _detectedIssue is BugData) {
+                  final bug = BugData(
+                    title: titleCtrl.text,
+                    description: descCtrl.text,
+                    stepsToReproduce: (_detectedIssue as BugData).stepsToReproduce,
+                    expectedBehavior: (_detectedIssue as BugData).expectedBehavior,
+                    actualBehavior: (_detectedIssue as BugData).actualBehavior,
+                    priority: _detectedIssue!.priority,
+                  );
+                  path = await _issueService.createBugReport(bug);
+                } else if (_issueType == 'feature' && _detectedIssue is FeatureData) {
+                  final feat = FeatureData(
+                    title: titleCtrl.text,
+                    description: descCtrl.text,
+                    userStory: (_detectedIssue as FeatureData).userStory,
+                    acceptanceCriteria: (_detectedIssue as FeatureData).acceptanceCriteria,
+                    priority: _detectedIssue!.priority,
+                  );
+                  path = await _issueService.createFeatureRequest(feat);
+                } else {
+                  throw Exception("Unknown issue type");
+                }
+                
+                _addBotMessage("✅ Issue created successfully!\nFile: $path");
+                setState(() {
+                  _detectedIssue = null;
+                  _isCreatingIssue = false;
+                });
+                
+              } catch (e) {
+                _addBotMessage("❌ Error creating issue: $e");
+                setState(() => _isCreatingIssue = false);
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      )
+    );
   }
 
   @override
@@ -506,6 +632,26 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
               ),
             ),
             
+            // Create Issue Button (Visible when issue detected)
+            if (_detectedIssue != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: FortuneColors.of(context).backgroundCard,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _issueType == 'bug' ? Colors.redAccent : Colors.amber,
+                    foregroundColor: Colors.black,
+                  ),
+                  icon: Icon(_issueType == 'bug' ? Icons.bug_report : Icons.lightbulb),
+                  label: Text(
+                     "Create ${_issueType == 'bug' ? 'Bug Report' : 'Feature Request'}",
+                     style: GoogleFonts.rye(fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: _showIssueConfirmation,
+                ),
+              ),
+
             // Input Area
             Container(
               padding: const EdgeInsets.all(8),
