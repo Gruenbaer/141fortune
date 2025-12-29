@@ -87,15 +87,14 @@ VS_VERSION_INFO VERSIONINFO
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.knthlz" "\0"
-            VALUE "FileDescription", "fortune142" "\0"
+            VALUE "FileDescription", "fortune141" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "fortune142" "\0"
+            VALUE "InternalName", "fortune141" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 com.knthlz. All rights reserved." "\0"
-            VALUE "OriginalFilename", "fortune142.exe" "\0"
-            VALUE "ProductName", "fortune142" "\0"
+            VALUE "OriginalFilename", "fortune141.exe" "\0"
+            VALUE "ProductName", "fortune141" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

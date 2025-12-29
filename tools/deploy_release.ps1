@@ -142,7 +142,7 @@ Write-Host "4) All of the above"
 $platformChoice = Read-Host "Choice [1]"
 if ($platformChoice -eq "") { $platformChoice = "1" }
 
-$repoUrl = "https://github.com/Gruenbaer/fortune142"
+$repoUrl = "https://github.com/Gruenbaer/141fortune"
 $downloadUrl = "$repoUrl/releases/download/v$version/app-release.apk"
 
 $notesText = "See GitHub for details"
