@@ -3,11 +3,20 @@
 
 $ErrorActionPreference = "Stop"
 
-# Define Flutter Path (Hardcoded for Agent Environment)
-$flutterBin = "C:\Users\Emili\.gemini\flutter\bin\flutter.bat"
-if (-not (Test-Path $flutterBin)) {
-    # Fallback to PATH if not found
-    $flutterBin = "flutter"
+# Define Flutter Path (Using Puro first, fallback to standard Flutter)
+# First try to use Puro
+if (Get-Command "puro" -ErrorAction SilentlyContinue) {
+    $flutterBin = "puro"
+    $flutterCmd = "flutter"
+}
+else {
+    # Fallback to hardcoded path
+    $flutterBin = "C:\Users\Emili\.gemini\flutter\bin\flutter.bat"
+    $flutterCmd = ""
+    if (-not (Test-Path $flutterBin)) {
+        # Final fallback to PATH
+        $flutterBin = "flutter"
+    }
 }
 
 # 1. Extract Version from pubspec.yaml
@@ -25,7 +34,12 @@ Write-Host "   Detected Version: $version" -ForegroundColor Green
 $deployWeb = Read-Host "Deploy Web to knthlz.de? (y/n) [n]"
 if ($deployWeb -eq 'y') {
     Write-Host "Building Web Release..." -ForegroundColor Cyan
-    & $flutterBin build web --release
+    if ($flutterCmd) {
+        & $flutterBin $flutterCmd build web --release
+    }
+    else {
+        & $flutterBin build web --release
+    }
     if ($LASTEXITCODE -ne 0) { throw "Web Build Failed" }
 
     Write-Host "Uploading to w01cdf36.kasserver.com..." -ForegroundColor Cyan
@@ -86,9 +100,12 @@ if ($tagExists) {
 
 # 3. Generate Changelog
 Write-Host "Generating Changelog..." -ForegroundColor Cyan
-# Get last tag
-$lastTag = git describe --tags --abbrev=0 2>$null
-if (-not $lastTag) { $lastTag = git rev-list --max-parents=0 HEAD } # fallback to first commit
+# Get last tag (get the most recent tag by version, not by describe)
+$lastTag = git tag --sort=-version:refname | Select-Object -First 1
+if (-not $lastTag) { 
+    # If no tags exist, use first commit
+    $lastTag = git rev-list --max-parents=0 HEAD 
+}
 
 $commits = git log --oneline --no-merges "$lastTag..HEAD" | ForEach-Object { "- $_" }
 Write-Host "   Changes since $lastTag :"
@@ -110,7 +127,12 @@ else {
 # 4. Build APK
 Write-Host "Building APK (Release Mode)..." -ForegroundColor Cyan
 # Execute Flutter using Call Operator '&'
-& $flutterBin build apk --release
+if ($flutterCmd) {
+    & $flutterBin $flutterCmd build apk --release
+}
+else {
+    & $flutterBin build apk --release
+}
 if ($LASTEXITCODE -ne 0) { throw "Build Failed" }
 
 $apkPath = "build/app/outputs/flutter-apk/app-release.apk"
