@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../models/game_settings.dart';
+import '../models/game_settings.dart' hide Player;
 import '../services/settings_service.dart';
 import '../l10n/app_localizations.dart';
-import '../theme/steampunk_theme.dart';
+import '../theme/fortune_theme.dart';
 import '../widgets/steampunk_widgets.dart';
+import '../widgets/player_name_input_dialog.dart';
 import 'package:provider/provider.dart';
 import '../models/achievement_manager.dart';
 
@@ -32,11 +33,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _settings = widget.currentSettings;
   }
 
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = SteampunkTheme.themeData;
+    final theme = Theme.of(context);
+    final fortuneTheme = FortuneColors.of(context); // Theme-aware colors
     
     // Helper to build a control panel section
     Widget buildSectionHeader(String title, IconData icon) {
@@ -44,17 +45,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         margin: const EdgeInsets.only(top: 24, bottom: 8),
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
-          color: SteampunkTheme.brassDark.withOpacity(0.3),
-          border: Border(bottom: BorderSide(color: SteampunkTheme.brassPrimary, width: 2)),
+          color: fortuneTheme.primaryDark.withOpacity(0.3),
+          border: Border(bottom: BorderSide(color: fortuneTheme.primary, width: 2)),
         ),
         child: Row(
           children: [
-            Icon(icon, color: SteampunkTheme.brassPrimary),
+            Icon(icon, color: fortuneTheme.primary),
             const SizedBox(width: 12),
             Text(
               title.toUpperCase(),
               style: theme.textTheme.labelLarge?.copyWith(
-                color: SteampunkTheme.brassPrimary,
+                color: fortuneTheme.primary,
                 letterSpacing: 2.0,
               ),
             ),
@@ -68,7 +69,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         margin: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
           color: Colors.black26,
-          border: Border.all(color: SteampunkTheme.brassDark.withOpacity(0.3)),
+          // Using slightly transparent border to blend with potential background
+          border: Border.all(color: fortuneTheme.primaryDark.withOpacity(0.3)),
           borderRadius: BorderRadius.circular(4),
         ),
         child: child,
@@ -86,16 +88,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        iconTheme: IconThemeData(color: SteampunkTheme.brassPrimary),
+        iconTheme: IconThemeData(color: fortuneTheme.primary),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-             color: SteampunkTheme.brassBright,
-            onPressed: _saveSettings,
-            tooltip: 'Save Configuration',
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.save),
+                color: fortuneTheme.primary, // Using primary for bright accent
+                onPressed: _saveSettings,
+                tooltip: 'Save Configuration',
+              ),
+              if (_settings != widget.currentSettings)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
+      // We keep SteampunkBackground for now, but it should arguably use FortuneTheme's asset path
+      // if available. Assuming SteampunkBackground is valid for now.
       body: SteampunkBackground(
         child: SafeArea(
           child: ListView(
@@ -108,7 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: ListTile(
                   title: Text(l10n.raceToScore, style: theme.textTheme.bodyLarge),
                   subtitle: Text('${_settings.raceToScore} ${l10n.points}', style: theme.textTheme.bodySmall),
-                  trailing: Icon(Icons.edit, color: SteampunkTheme.brassPrimary),
+                  trailing: Icon(Icons.edit, color: fortuneTheme.primary),
                   onTap: () => _editRaceToScore(),
                 ),
               ),
@@ -118,7 +148,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: ListTile(
                   title: Text(l10n.player1, style: theme.textTheme.bodyLarge),
                   subtitle: Text(_settings.player1Name, style: theme.textTheme.displaySmall?.copyWith(fontSize: 18)),
-                  trailing: Icon(Icons.edit, color: SteampunkTheme.brassPrimary),
+                  trailing: Icon(Icons.edit, color: fortuneTheme.primary),
                   onTap: () => _editPlayerName(1),
                 ),
               ),
@@ -126,7 +156,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: ListTile(
                   title: Text(l10n.player2, style: theme.textTheme.bodyLarge),
                   subtitle: Text(_settings.player2Name, style: theme.textTheme.displaySmall?.copyWith(fontSize: 18)),
-                  trailing: Icon(Icons.edit, color: SteampunkTheme.brassPrimary),
+                  trailing: Icon(Icons.edit, color: fortuneTheme.primary),
                   onTap: () => _editPlayerName(2),
                 ),
               ),
@@ -139,8 +169,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: Text(l10n.threeFoulRule, style: theme.textTheme.bodyLarge),
                   subtitle: Text(l10n.threeFoulRuleSubtitle, style: theme.textTheme.bodySmall),
                   value: _settings.threeFoulRuleEnabled,
-                  activeColor: SteampunkTheme.amberGlow,
-                  activeTrackColor: SteampunkTheme.brassDark,
+                  activeColor: fortuneTheme.secondary, // Amber/Glow equivalent
+                  activeTrackColor: fortuneTheme.primaryDark,
                   inactiveThumbColor: Colors.grey,
                   inactiveTrackColor: Colors.black,
                   onChanged: (value) {
@@ -157,17 +187,104 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: Text(l10n.soundEffects, style: theme.textTheme.bodyLarge),
                   subtitle: Text(l10n.enableGameSounds, style: theme.textTheme.bodySmall),
                   value: _settings.soundEnabled,
-                  activeColor: SteampunkTheme.amberGlow,
-                   activeTrackColor: SteampunkTheme.brassDark,
+                  activeColor: fortuneTheme.secondary,
+                   activeTrackColor: fortuneTheme.primaryDark,
                   secondary: Icon(
                     _settings.soundEnabled ? Icons.volume_up : Icons.volume_off,
-                    color: _settings.soundEnabled ? SteampunkTheme.brassPrimary : Colors.grey,
+                    color: _settings.soundEnabled ? fortuneTheme.primary : Colors.grey,
                   ),
                   onChanged: (value) {
                     setState(() {
                       _settings = _settings.copyWith(soundEnabled: value);
                     });
                   },
+                ),
+              ),
+              // Innings & Handicap Section
+              buildSectionHeader('Limits & Handicaps', Icons.tune),
+
+              // Max Innings Slider
+              buildPanelTile(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16, top: 12, right: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Max Innings', style: theme.textTheme.bodyLarge),
+                          Text(
+                            '${_settings.maxInnings}',
+                            style: theme.textTheme.displaySmall?.copyWith(fontSize: 20),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Slider(
+                      value: _settings.maxInnings.toDouble(),
+                      min: 10,
+                      max: 100,
+                      divisions: 18, // Steps of 5 (approx)
+                      label: '${_settings.maxInnings}',
+                      activeColor: fortuneTheme.secondary,
+                      inactiveColor: fortuneTheme.primaryDark.withOpacity(0.3),
+                      thumbColor: fortuneTheme.primary,
+                      onChanged: (value) {
+                        setState(() {
+                          _settings = _settings.copyWith(maxInnings: value.round());
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              // Player 1 Handicap
+              buildPanelTile(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_settings.player1Name, style: theme.textTheme.bodyLarge),
+                          Text('Point Multiplier', style: theme.textTheme.bodySmall),
+                        ],
+                      ),
+                      _buildMultiplierSelector(
+                        _settings.player1HandicapMultiplier,
+                        (val) => setState(() => _settings = _settings.copyWith(player1HandicapMultiplier: val)),
+                        fortuneTheme,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Player 2 Handicap
+              buildPanelTile(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_settings.player2Name, style: theme.textTheme.bodyLarge),
+                          Text('Point Multiplier', style: theme.textTheme.bodySmall),
+                        ],
+                      ),
+                      _buildMultiplierSelector(
+                        _settings.player2HandicapMultiplier,
+                        (val) => setState(() => _settings = _settings.copyWith(player2HandicapMultiplier: val)),
+                        fortuneTheme,
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -181,7 +298,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       title: Text(l10n.german, style: theme.textTheme.bodyMedium),
                       value: 'de',
                       groupValue: _settings.languageCode,
-                      activeColor: SteampunkTheme.amberGlow,
+                      activeColor: fortuneTheme.secondary,
                       onChanged: (value) {
                         setState(() {
                           _settings = _settings.copyWith(languageCode: value);
@@ -192,7 +309,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       title: Text(l10n.english, style: theme.textTheme.bodyMedium),
                       value: 'en',
                       groupValue: _settings.languageCode,
-                      activeColor: SteampunkTheme.amberGlow,
+                      activeColor: fortuneTheme.secondary,
                       onChanged: (value) {
                         setState(() {
                           _settings = _settings.copyWith(languageCode: value);
@@ -203,36 +320,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
 
-              // Theme Selection (Hidden or styled)
-              // Since we are forcing Steampunk, maybe hide this or just show it as "Visual Style"
+              // Theme Selection
               buildSectionHeader(l10n.theme, Icons.palette),
               buildPanelTile(
                 child: Column(
                   children: [
-                    RadioListTile<bool>(
-                      title: Text(l10n.lightTheme, style: theme.textTheme.bodyMedium),
-                      subtitle: const Text('Classic (Disabled)'), // Hint it's disabled or ignored
-                      secondary: const Icon(Icons.light_mode, color: Colors.grey),
-                      value: false,
-                      groupValue: _settings.isDarkTheme,
-                      activeColor: SteampunkTheme.amberGlow,
+                    RadioListTile<String>(
+                      title: Text('Steampunk', style: theme.textTheme.bodyMedium),
+                      subtitle: const Text('Classic Brass & Wood'),
+                      secondary: const Icon(Icons.access_time_filled, color: Color(0xFFCDBE78)),
+                      value: 'steampunk',
+                      groupValue: _settings.themeId,
+                      activeColor: const Color(0xFFFFA000),
                       onChanged: (value) {
-                        // For now allow switching, but MainActivity forces Dark
                         setState(() {
-                          _settings = _settings.copyWith(isDarkTheme: value);
+                          _settings = _settings.copyWith(themeId: value);
                         });
                       },
                     ),
-                    RadioListTile<bool>(
-                      title: Text(l10n.darkTheme, style: theme.textTheme.bodyMedium),
-                      subtitle: const Text('Steampunk (Active)'),
-                      secondary: const Icon(Icons.dark_mode, color: SteampunkTheme.brassBright),
-                      value: true,
-                      groupValue: _settings.isDarkTheme,
-                      activeColor: SteampunkTheme.amberGlow,
+                    RadioListTile<String>(
+                      title: Text('Cyberpunk', style: theme.textTheme.bodyMedium),
+                      subtitle: const Text('Neon & Glitch'),
+                      secondary: const Icon(Icons.memory, color: Color(0xFF00F0FF)),
+                      value: 'cyberpunk',
+                      groupValue: _settings.themeId,
+                      activeColor: const Color(0xFF00F0FF),
                       onChanged: (value) {
                         setState(() {
-                          _settings = _settings.copyWith(isDarkTheme: value);
+                          _settings = _settings.copyWith(themeId: value);
                         });
                       },
                     ),
@@ -249,18 +364,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   decoration: BoxDecoration(
                     color: Colors.black45,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: SteampunkTheme.brassDark, width: 2),
+                    border: Border.all(color: fortuneTheme.primaryDark, width: 2),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.info_outline, color: SteampunkTheme.brassPrimary, size: 20),
+                          Icon(Icons.info_outline, color: fortuneTheme.primary, size: 20),
                           const SizedBox(width: 8),
                           Text(
                             '3-FOUL PROTOCOL',
-                            style: theme.textTheme.labelLarge?.copyWith(color: SteampunkTheme.brassBright),
+                            style: theme.textTheme.labelLarge?.copyWith(color: fortuneTheme.primary),
                           ),
                         ],
                       ),
@@ -327,15 +442,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirmed == true && mounted) {
-      // Perform Reset
-      
-      // 1. Reset Achievements
       final achievementManager = Provider.of<AchievementManager>(context, listen: false);
       await achievementManager.reset();
-      
-      // 2. Reset Settings (to defaults) -> actually maybe just keep settings? 
-      // User asked "reset all". Let's reset settings too for completeness, or at least notify.
-      // For now, let's stick to Achievements as that's the main context.
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -357,9 +465,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           maxLength: 50,
           maxLengthEnforcement: MaxLengthEnforcement.enforced,
           keyboardType: TextInputType.number,
+          contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
           decoration: InputDecoration(
             labelText: l10n.points,
             hintText: 'Enter target score',
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
           ),
         ),
         actions: [
@@ -387,48 +499,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // Refactored to use PlayerNameInputDialog
   Future<void> _editPlayerName(int playerNumber) async {
     final l10n = AppLocalizations.of(context);
     final currentName = playerNumber == 1 ? _settings.player1Name : _settings.player2Name;
-    final controller = TextEditingController(text: currentName);
     
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(playerNumber == 1 ? l10n.player1 : l10n.player2),
-        content: TextField(
-          controller: controller,
-          maxLength: 30,
-          maxLengthEnforcement: MaxLengthEnforcement.enforced,
-          decoration: InputDecoration(
-            labelText: l10n.playerName,
-            hintText: 'Enter player name',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              final value = controller.text.trim();
-              if (value.isNotEmpty) {
-                Navigator.pop(context, value);
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+    final finalName = await PlayerNameInputDialog.show(
+      context,
+      title: playerNumber == 1 ? l10n.player1 : l10n.player2,
+      initialName: currentName,
+      labelText: l10n.playerName,
+      hintText: 'Enter or select player',
     );
 
-    if (result != null) {
+    if (finalName != null && finalName != currentName && finalName.isNotEmpty) {
       setState(() {
         if (playerNumber == 1) {
-          _settings = _settings.copyWith(player1Name: result);
+          _settings = _settings.copyWith(player1Name: finalName);
         } else {
-          _settings = _settings.copyWith(player2Name: result);
+          _settings = _settings.copyWith(player2Name: finalName);
         }
       });
     }
@@ -445,5 +534,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
       Navigator.pop(context);
     }
+  }
+
+  Widget _buildMultiplierSelector(double current, Function(double) onChanged, FortuneColors themeColors) {
+    return Container(
+      decoration: BoxDecoration(
+        color: themeColors.primaryDark.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: themeColors.primary.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [1.0, 2.0, 3.0].map((val) {
+          final isSelected = current == val;
+          return GestureDetector(
+            onTap: () => onChanged(val),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? themeColors.secondary : Colors.transparent,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Text(
+                '${val.toInt()}x',
+                style: TextStyle(
+                  color: isSelected ? Colors.black : themeColors.primary,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 }

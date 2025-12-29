@@ -27,7 +27,9 @@ class BallButton extends StatelessWidget {
 
     return GestureDetector(
       onTap: isActive ? onTap : null,
-      child: Opacity(
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
         opacity: isActive ? 1.0 : 0.4,
         child: ClipOval(
           child: Image.asset(

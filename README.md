@@ -1,10 +1,10 @@
-# Fortune 14/2 - Pool Scoring App
+# 14.1 Fortune - Professional Straight Pool Scoring App
 
-A Flutter-based pool scoring application for Fortune 14/2 billiards.
+A professional Flutter-based scoring application for 14.1 Straight Pool (14.1 Continuous).
 
 ## 🎱 About
 
-Fortune 14/2 is a scoring app designed for tracking pool games with custom rules, player statistics, achievements, and game history.
+14.1 Fortune is a professional scoring app for 14.1 Straight Pool, featuring accurate rule enforcement, player statistics, achievements, and comprehensive game history.
 
 ## 🛠️ Development Setup
 
@@ -26,8 +26,8 @@ This project uses **Puro** (Flutter version manager) instead of standard Flutter
 
 2. **Clone the repository**:
    ```bash
-   git clone https://github.com/Gruenbaer/fortune142
-   cd fortune142
+   git clone https://github.com/Gruenbaer/141fortune
+   cd 141fortune
    ```
 
 3. **Set up Flutter environment**:

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../services/player_service.dart';
 import 'player_profile_screen.dart';
 import '../l10n/app_localizations.dart';
+import '../widgets/player_name_input_dialog.dart';
 
 class PlayersScreen extends StatefulWidget {
   const PlayersScreen({super.key});
@@ -32,38 +33,11 @@ class _PlayersScreenState extends State<PlayersScreen> {
   }
 
   Future<void> _createPlayer() async {
-    final controller = TextEditingController();
-    
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context).createPlayer),
-        content: TextField(
-          controller: controller,
-          maxLength: 30,
-          maxLengthEnforcement: MaxLengthEnforcement.enforced,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: AppLocalizations.of(context).playerName,
-            hintText: 'Enter name',
-          ),
-          textCapitalization: TextCapitalization.words,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context).cancel),
-          ),
-          TextButton(
-            onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                Navigator.pop(context, controller.text.trim());
-              }
-            },
-            child: Text(AppLocalizations.of(context).create),
-          ),
-        ],
-      ),
+    final name = await PlayerNameInputDialog.show(
+      context,
+      title: AppLocalizations.of(context).createPlayer,
+      labelText: AppLocalizations.of(context).playerName,
+      hintText: 'Enter name',
     );
 
     if (name != null) {

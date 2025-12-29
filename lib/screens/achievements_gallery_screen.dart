@@ -148,16 +148,8 @@ class AchievementsGalleryScreen extends StatelessWidget {
     String title = achievement.title;
     String description = achievement.description;
     
-    // Dynamic Logic for Easter Eggs (Vinzend & Lucky 7)
-    if (achievement.id == 'vinzend') {
-      if (!achievement.isUnlocked) {
-        title = l10n.vinzendTitle; 
-        description = l10n.vinzendLocked;
-      } else {
-        title = l10n.vinzendTitle;
-        description = l10n.vinzendDesc;
-      }
-    } else if (achievement.id == 'lucky_7') {
+    // Dynamic Logic for Easter Eggs (Lucky 7)
+    if (achievement.id == 'lucky_7') {
       if (!achievement.isUnlocked) {
          title = l10n.lucky7Title;
          description = l10n.lucky7Locked;

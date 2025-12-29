@@ -8,6 +8,7 @@ import '../widgets/achievement_badge.dart';
 import '../l10n/app_localizations.dart';
 import '../services/game_history_service.dart';
 import '../models/game_record.dart';
+import '../widgets/player_name_input_dialog.dart';
 
 class PlayerProfileScreen extends StatefulWidget {
   final Player player;
@@ -70,37 +71,12 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
 
   Future<void> _editPlayerName() async {
     final l10n = AppLocalizations.of(context);
-    final controller = TextEditingController(text: _player.name);
     
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.editPlayer),
-        content: TextField(
-          controller: controller,
-          maxLength: 30,
-          maxLengthEnforcement: MaxLengthEnforcement.enforced,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: l10n.playerName,
-          ),
-          textCapitalization: TextCapitalization.words,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                Navigator.pop(context, controller.text.trim());
-              }
-            },
-            child: Text(l10n.save),
-          ),
-        ],
-      ),
+    final newName = await PlayerNameInputDialog.show(
+      context,
+      title: l10n.editPlayer,
+      initialName: _player.name,
+      labelText: l10n.playerName,
     );
 
     if (newName != null && newName != _player.name) {

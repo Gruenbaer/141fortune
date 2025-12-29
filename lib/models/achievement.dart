@@ -265,15 +265,6 @@ class AchievementDefinitions {
   );
 
   // ===== EASTER EGGS =====
-  static final vinzend = Achievement(
-    id: 'vinzend',
-    title: 'Lord Vinzend the 13th',
-    description: 'Du hast 13 Mal auf die 13 gedrückt, ohne auch nur eine Kugel gesenkt zu haben. Musst Du Zeit haben...',
-    howToUnlock: '🤐 Geheimnis!',
-    emoji: '👑',
-    isEasterEgg: true,
-  );
-
   static final luckyNumber = Achievement(
     id: 'lucky_7',
     title: 'Glückszahl 7',
@@ -317,7 +308,6 @@ class AchievementDefinitions {
         marathon,
         
         // Easter Eggs
-        vinzend,
         luckyNumber,
       ];
 }

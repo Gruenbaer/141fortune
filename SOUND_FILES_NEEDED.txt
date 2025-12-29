@@ -1,0 +1,7 @@
+// Note: Add these sound files to assets/sounds/
+// - buzzer.mp3 (for negative points)
+// - tada.mp3 (Windows 95 tada sound for positive points)
+//
+// Then update pubspec.yaml to include:
+// assets:
+//   - assets/sounds/

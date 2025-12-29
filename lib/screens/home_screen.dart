@@ -15,6 +15,7 @@ import '../screens/game_history_screen.dart';
 import '../widgets/steampunk_widgets.dart';
 import '../theme/steampunk_theme.dart';
 import '../services/game_history_service.dart';
+import '../widgets/video_logo.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -47,8 +48,15 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(
         builder: (context) => ChangeNotifierProvider(
           create: (_) => GameState(
-            raceToScore: record.raceToScore,
-            playerNames: [record.player1Name, record.player2Name],
+            settings: GameSettings(
+               raceToScore: record.raceToScore,
+               player1Name: record.player1Name,
+               player2Name: record.player2Name,
+               // Reconstruct other settings from record or defaults if missing in record
+               // Assuming GameRecord stores standard settings:
+               // threeFoulRuleEnabled, etc. might need to be added to GameRecord or defaulted.
+               // For now, assuming defaults or minimal reconstruction.
+            ),
             achievementManager: Provider.of<AchievementManager>(context, listen: false),
           ),
           child: GameScreen(
@@ -74,10 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
             MaterialPageRoute(
               builder: (context) => ChangeNotifierProvider(
                 create: (_) => GameState(
-                  raceToScore: settings.raceToScore,
-                  playerNames: [settings.player1Name, settings.player2Name],
-                  playerHandicaps: [settings.player1Handicap, settings.player2Handicap],
-                  threeFoulRuleEnabled: settings.threeFoulRuleEnabled,
+                  settings: settings,
                   achievementManager: Provider.of<AchievementManager>(context, listen: false),
                 ),
                 child: GameScreen(
@@ -116,12 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     // LOGO SECTION
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Image.asset(
-                        'assets/images/app_logo.png',
-                        width: 250,
-                        height: 250,
-                        fit: BoxFit.contain,
-                      ),
+                      child: VideoLogo(soundEnabled: Provider.of<GameSettings>(context).soundEnabled),
                     ),
                     
                     const SizedBox(height: 48),

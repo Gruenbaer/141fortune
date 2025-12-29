@@ -8,6 +8,8 @@ import 'models/game_settings.dart';
 import 'l10n/app_localizations.dart';
 import 'theme/steampunk_theme.dart';
 
+import 'theme/fortune_theme.dart';
+
 import 'widgets/feedback_wrapper.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -99,8 +101,8 @@ class _MyAppState extends State<MyApp> {
             ),
             
             // Theme
-            theme: SteampunkTheme.themeData,
-            darkTheme: SteampunkTheme.themeData,
+            theme: settings.themeId == 'cyberpunk' ? CyberpunkTheme.themeData : SteampunkTheme.themeData,
+            darkTheme: settings.themeId == 'cyberpunk' ? CyberpunkTheme.themeData : SteampunkTheme.themeData,
             themeMode: ThemeMode.dark,
             
             home: const HomeScreen(),

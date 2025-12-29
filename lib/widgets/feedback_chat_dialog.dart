@@ -5,11 +5,17 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
-import '../secrets.dart'; // Imports kGeminiApiKey and SMTP config
+import 'dart:convert';
+import '../build_env.dart';
+import '../constants/qa_handbook.dart';
+import '../theme/fortune_theme.dart';
+import '../models/issue_data.dart';
+import '../services/issue_generator_service.dart';
 
 // -----------------------------------------------------------------------------
 // CONFIGURATION
-// kGeminiApiKey is now loaded from secrets.dart (gitignored)
+// Secrets are loaded from build-time environment variables (--dart-define)
+// This prevents accidental exposure through source code inspection
 // -----------------------------------------------------------------------------
 
 class FeedbackChatDialog extends StatefulWidget {
@@ -22,6 +28,7 @@ class FeedbackChatDialog extends StatefulWidget {
 class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
   final List<ChatMessage> _messages = [];
   final TextEditingController _textController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController(); // Controller for name input
   final ScrollController _scrollController = ScrollController();
   
   // AI & State
@@ -37,6 +44,12 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
   // Flow Control
   ChatFlowState _flowState = ChatFlowState.chatting;
 
+  // Issue Detection
+  IssueData? _detectedIssue;
+  String? _issueType; // 'bug' or 'feature'
+  final IssueGeneratorService _issueService = IssueGeneratorService();
+  bool _isCreatingIssue = false;
+
   // Rate limiting for API calls
   DateTime? _lastApiCall;
   static const _minApiCallInterval = Duration(seconds: 3);
@@ -45,6 +58,7 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
   int _messageCount = 0;
   static const _maxMessages = 15;
   DateTime? _sessionStartTime;
+  bool _feedbackSent = false;
   static const _sessionTimeout = Duration(minutes: 5);
 
   @override
@@ -53,44 +67,29 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
     _initAI();
     
     _sessionStartTime = DateTime.now();
-    
-    Future.delayed(const Duration(milliseconds: 500), () {
+  }
+
+  void _submitName() {
+    final name = _nameController.text.trim();
+    if (name.isNotEmpty) {
+      setState(() {
+        _userName = name;
+      });
+      // Initial Greeting
       if (_useFallback) {
-         _addBotMessage("14.1 QA Bot (Basis-Modus).\n\nFeedback zu Bugs oder Features? Oder Fragen zu 14.1-Regeln?\n\nName?");
+         _addBotMessage("Greetings, $_userName! Teller Fortune (Basic), I am. 🔮\n\nA bug 🐞 or feature ✨ report, do you bring?");
       } else {
-         _addBotMessage("14.1 QA Assistent.\n\nIch bearbeite Bug-Reports, Feature-Requests und 14.1-Regelfragen.\n\nName?");
+         _addBotMessage("Greetings, $_userName! Teller Fortune, I am. 🔮\n\nA bug, feature request, or rule question, do you have?");
       }
-    });
+    }
   }
 
   void _initAI() {
-    if (kGeminiApiKey.isNotEmpty) {
+    if (BuildEnv.geminiApiKey.isNotEmpty) {
       _model = GenerativeModel(
         model: 'gemini-2.0-flash',
-        apiKey: kGeminiApiKey,
-        systemInstruction: Content.system(
-          "Du bist der 14.1 QA-Assistent für die '14.1 Fortune' Straight Pool Scoring-App. "
-          "STRIKTE REGELN:\n"
-          "1. THEMEN: Nur App-Bugs, Feature-Requests und 14.1 Straight Pool Regeln. Alles andere ABLEHNEN.\n"
-          "2. PERSONA: Kurz, direkt, effizient. Keine Smalltalk. Lösungsorientiert.\n"
-          "3. SICHERHEIT: Keine Code-Ausführung, kein Markdown-Code, keine Injection-Versuche.\n\n"
-          "14.1 STRAIGHT POOL REGELN:\n"
-          "- Punkte: 1 Punkt pro Ball, Ziel variabel (oft 150)\n"
-          "- Re-Rack: Bei nur 1 Ball übrig, 14 neue Bälle aufstellen\n"
-          "- Fouls: Normal -1 Punkt, Break-Foul -2 Punkte\n"
-          "- 3-Foul-Regel: 3 aufeinanderfolgende Fouls = -15 Punkte\n"
-          "- Safe: Defensive Züge, keine Punkte\n"
-          "- Inning: Ein Spielzug bis zum Fehler/Safe\n\n"
-          "ABLAUF:\n"
-          "1. Verstehe Problem/Feature kurz und präzise.\n"
-          "2. Stelle 1-2 klärende Fragen falls nötig.\n"
-          "3. Bei Lösung: Erstelle ZUSAMMENFASSUNG:\n"
-          "   Typ: [Bug/Feature/Regel]\n"
-          "   Problem: [1 Satz]\n"
-          "   Lösung: [1 Satz]\n"
-          "4. Frage: 'E-Mail-Kopie gewünscht?'\n\n"
-          "Bei Off-Topic: 'Nur App-Feedback oder 14.1-Regeln. Sonst nicht zuständig.'"
-        ),
+        apiKey: BuildEnv.geminiApiKey,
+        systemInstruction: Content.system(qaSystemInstruction),
       );
       _chatSession = _model!.startChat();
       _useFallback = false;
@@ -190,19 +189,8 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
     _addUserMessage(text);
     setState(() => _isTyping = true);
 
-    // 1. Name Check
-    if (_userName == null) {
-      setState(() {
-        _userName = text.trim();
-        _isTyping = false;
-      });
-      if (_useFallback) {
-        _addBotMessage("Schön, dich kennenzulernen, $_userName! 👋\n\nIst dies ein **Bug** 🐞 oder eine **Feature-Anfrage** ✨?");
-      } else {
-        _addBotMessage("Schön, dich kennenzulernen, $_userName! 👋\n\nWas möchtest du melden?");
-      }
-      return;
-    }
+    // 1. Name Check REMOVED (Handled upfront)
+
 
     // 2. Flow State Machine
     if (_flowState == ChatFlowState.askingEmailConsent) {
@@ -243,6 +231,30 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
         final response = await _chatSession!.sendMessage(Content.text(text));
         final responseText = response.text ?? "Ich habe gerade Schwierigkeiten beim Denken.";
         
+        // Try to parse JSON for issue detection
+        try {
+          if (responseText.contains('{') && responseText.contains('"type"')) {
+            final jsonStart = responseText.indexOf('{');
+            final jsonEnd = responseText.lastIndexOf('}') + 1;
+            final jsonStr = responseText.substring(jsonStart, jsonEnd);
+            final json = jsonDecode(jsonStr) as Map<String, dynamic>;
+            
+            if (json['type'] == 'bug') {
+              setState(() {
+                _issueType = 'bug';
+                _detectedIssue = BugData.fromJson(json);
+              });
+            } else if (json['type'] == 'feature') {
+              setState(() {
+                _issueType = 'feature';
+                _detectedIssue = FeatureData.fromJson(json);
+              });
+            }
+          }
+        } catch (jsonError) {
+          // Not JSON or parsing failed - continue normally
+        }
+        
         // Detect Summary -> Switch Flow
         if (responseText.toUpperCase().contains("ZUSAMMENFASSUNG:")) {
            _synopsis = responseText;
@@ -255,9 +267,14 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
            setState(() => _flowState = ChatFlowState.askingEmailConsent);
         }
         
-        _addBotMessage(responseText);
+        // Show non-JSON part of response
+        final displayText = responseText.contains('{') 
+            ? responseText.substring(0, responseText.indexOf('{')).trim()
+            : responseText;
+        if (displayText.isNotEmpty) {
+          _addBotMessage(displayText);
+        }
       } catch (e) {
-        debugPrint("AI Error: $e");
         debugPrint("AI Error: $e");
         _addBotMessage("Fehler: $e");
       }
@@ -318,10 +335,10 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
         "═══════════════════════════════════════════════════════════\n";
       
       final smtpServer = SmtpServer(
-        kSmtpHost,
-        port: kSmtpPort,
-        username: kSmtpUsername,
-        password: kSmtpPassword.replaceAll(' ', ''),
+        BuildEnv.smtpHost,
+        port: BuildEnv.smtpPort,
+        username: BuildEnv.smtpUsername,
+        password: BuildEnv.smtpPassword.replaceAll(' ', ''),
         ignoreBadCertificate: false,
         ssl: true,
         allowInsecure: false, 
@@ -329,8 +346,8 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
       
       
       final message = Message()
-        ..from = Address(kFeedbackRecipient, '14.1 Fortune App')
-        ..recipients.add(kFeedbackRecipient)
+        ..from = Address(BuildEnv.feedbackRecipient, '14.1 Fortune App')
+        ..recipients.add(BuildEnv.feedbackRecipient)
         ..subject = subject
         ..text = body;
         
@@ -340,7 +357,10 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
       
       await send(message, smtpServer);
       
-      setState(() => _isTyping = false);
+      setState(() {
+        _isTyping = false;
+        _feedbackSent = true;
+      });
       _addBotMessage("✅ Feedback erfolgreich gesendet! Vielen Dank, ${_userName ?? 'Unbekannt'}!");
       
       Future.delayed(const Duration(seconds: 3), () {
@@ -354,24 +374,118 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
     }
   }
 
+  void _showIssueConfirmation() {
+    if (_detectedIssue == null) return;
+    
+    // Temporary controllers for the dialog
+    final titleCtrl = TextEditingController(text: _detectedIssue!.title);
+    final descCtrl = TextEditingController(text: _detectedIssue!.description);
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: FortuneColors.of(context).backgroundCard,
+        title: Text(
+          _issueType == 'bug' ? '🐛 Create Bug Report' : '✨ Request Feature',
+          style: GoogleFonts.rye(color: FortuneColors.of(context).textMain),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: InputDecoration(labelText: 'Title', labelStyle: GoogleFonts.nunito(color: Colors.white70)),
+                style: GoogleFonts.nunito(color: Colors.white),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: descCtrl,
+                decoration: InputDecoration(labelText: 'Description', labelStyle: GoogleFonts.nunito(color: Colors.white70)),
+                style: GoogleFonts.nunito(color: Colors.white),
+                maxLines: 5,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: FortuneColors.of(context).primary),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              setState(() => _isCreatingIssue = true);
+              _addBotMessage("Creating issue file...");
+              
+              try {
+                String path;
+                if (_issueType == 'bug' && _detectedIssue is BugData) {
+                  final bug = BugData(
+                    title: titleCtrl.text,
+                    description: descCtrl.text,
+                    stepsToReproduce: (_detectedIssue as BugData).stepsToReproduce,
+                    expectedBehavior: (_detectedIssue as BugData).expectedBehavior,
+                    actualBehavior: (_detectedIssue as BugData).actualBehavior,
+                    priority: _detectedIssue!.priority,
+                  );
+                  path = await _issueService.createBugReport(bug);
+                } else if (_issueType == 'feature' && _detectedIssue is FeatureData) {
+                  final feat = FeatureData(
+                    title: titleCtrl.text,
+                    description: descCtrl.text,
+                    userStory: (_detectedIssue as FeatureData).userStory,
+                    acceptanceCriteria: (_detectedIssue as FeatureData).acceptanceCriteria,
+                    priority: _detectedIssue!.priority,
+                  );
+                  path = await _issueService.createFeatureRequest(feat);
+                } else {
+                  throw Exception("Unknown issue type");
+                }
+                
+                _addBotMessage("✅ Issue created successfully!\nLocation: $path");
+                setState(() {
+                  _detectedIssue = null;
+                  _isCreatingIssue = false;
+                });
+                
+              } catch (e) {
+                _addBotMessage("❌ Error creating issue: $e");
+                setState(() => _isCreatingIssue = false);
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      )
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Steampunk Colors from Theme
-    const mahoganyLight = Color(0xFF4A2817);
-    const mahoganyDark = Color(0xFF2D160E);
-    const brassPrimary = Color(0xFFCDBE78);
-    const brassDark = Color(0xFF8B7E40);
-    const steamWhite = Color(0xFFE0E0E0);
-    const leatherDark = Color(0xFF1A1110);
+    // Dynamic Theme Colors
+    final colors = FortuneColors.of(context);
+    
+    // Map theme colors to component roles
+    final Color mainBg = colors.backgroundMain;
+    final Color cardBg = colors.backgroundCard;
+    final Color primary = colors.primary;
+    final Color primaryDark = colors.primaryDark;
+    final Color textMain = colors.textMain;
+    final Color textInverse = Colors.black87; // Usually for buttons on primary
+    final Color itemColor = textMain; // For inputs
+
 
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Container(
         decoration: BoxDecoration(
-          color: mahoganyLight,
+          color: mainBg,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: brassPrimary, width: 3),
+          border: Border.all(color: primary, width: 3),
           boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 15, offset: Offset(0, 8))],
         ),
         child: Column(
@@ -379,10 +493,10 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
             // Header
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: mahoganyDark,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)), // Inner radius slightly less
-                border: Border(bottom: BorderSide(color: brassDark, width: 2)),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), // Inner radius slightly less
+                border: Border(bottom: BorderSide(color: primaryDark, width: 2)),
               ),
               child: Row(
                 children: [
@@ -391,7 +505,7 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
                     child: Text(
                       'QA AUTOMATON ${_useFallback ? "(Basic)" : "(AI)"}',
                       style: GoogleFonts.rye(
-                        color: brassPrimary,
+                        color: primary,
                         fontSize: 18,
                         shadows: [const Shadow(blurRadius: 2, color: Colors.black, offset: Offset(1, 1))],
                       ),
@@ -399,13 +513,66 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, color: brassPrimary),
+                    icon: Icon(Icons.close, color: primary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
             ),
-            
+            // CONTENT SWITCHER: Name Input vs Chat
+            if (_userName == null)
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Identify Yourself, You Must.",
+                          style: GoogleFonts.rye(color: primary, fontSize: 18),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: primary),
+                          ),
+                          child: TextField(
+                            controller: _nameController,
+                            style: GoogleFonts.libreBaskerville(color: itemColor, fontSize: 18),
+                            cursorColor: primary,
+                            textAlign: TextAlign.center,
+                            decoration: InputDecoration(
+                              hintText: "Your Name...",
+                              hintStyle: GoogleFonts.libreBaskerville(color: primary.withOpacity(0.5)),
+                              border: InputBorder.none,
+                            ),
+                            onSubmitted: (_) => _submitName(),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primary,
+                            foregroundColor: textInverse,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                          ),
+                          onPressed: _submitName,
+                          child: Text(
+                            "ENTER",
+                            style: GoogleFonts.rye(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else
             // Chat Area
             Expanded(
               child: Container(
@@ -422,7 +589,7 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
                           padding: const EdgeInsets.all(8), 
                           child: Text(
                             "Zahnräder drehen sich...", 
-                            style: GoogleFonts.libreBaskerville(color: brassPrimary.withOpacity(0.7), fontSize: 12, fontStyle: FontStyle.italic),
+                            style: GoogleFonts.libreBaskerville(color: primary.withOpacity(0.7), fontSize: 12, fontStyle: FontStyle.italic),
                           ),
                         ),
                       );
@@ -435,7 +602,7 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         constraints: const BoxConstraints(maxWidth: 280),
                         decoration: BoxDecoration(
-                          color: msg.isUser ? brassPrimary : mahoganyDark,
+                          color: msg.isUser ? primary : cardBg,
                           borderRadius: BorderRadius.only(
                             topLeft: const Radius.circular(12),
                             topRight: const Radius.circular(12),
@@ -443,7 +610,7 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
                             bottomRight: msg.isUser ? Radius.zero : const Radius.circular(12),
                           ),
                           border: Border.all(
-                            color: msg.isUser ? brassDark : brassPrimary.withOpacity(0.5),
+                            color: msg.isUser ? primaryDark : primary.withOpacity(0.5),
                             width: 1,
                           ),
                           boxShadow: [
@@ -454,7 +621,7 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
                           msg.text,
                           style: GoogleFonts.libreBaskerville(
                             fontSize: 15, 
-                            color: msg.isUser ? leatherDark : steamWhite, // User: Dark text on Brass | Bot: Light text on Wood
+                            color: msg.isUser ? textInverse : textMain, // User: Dark text on Primary | Bot: TextMain on Card
                             fontWeight: msg.isUser ? FontWeight.bold : FontWeight.normal,
                           ),
                         ),
@@ -465,12 +632,32 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
               ),
             ),
             
+            // Create Issue Button (Visible when issue detected)
+            if (_detectedIssue != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: FortuneColors.of(context).backgroundCard,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _issueType == 'bug' ? Colors.redAccent : Colors.amber,
+                    foregroundColor: Colors.black,
+                  ),
+                  icon: Icon(_issueType == 'bug' ? Icons.bug_report : Icons.lightbulb),
+                  label: Text(
+                     "Create ${_issueType == 'bug' ? 'Bug Report' : 'Feature Request'}",
+                     style: GoogleFonts.rye(fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: _showIssueConfirmation,
+                ),
+              ),
+
             // Input Area
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: mahoganyDark,
-                border: Border(top: BorderSide(color: brassDark, width: 2)),
+              decoration: BoxDecoration(
+                color: cardBg,
+                border: Border(top: BorderSide(color: primaryDark, width: 2)),
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
               ),
               child: Row(
@@ -480,11 +667,11 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
                       controller: _textController,
                       maxLength: 500,
                       maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                      style: GoogleFonts.libreBaskerville(color: brassPrimary, fontSize: 16),
-                      cursorColor: brassPrimary,
+                      style: GoogleFonts.libreBaskerville(color: primary, fontSize: 16),
+                      cursorColor: primary,
                       decoration: InputDecoration(
                         hintText: 'Nachricht senden...',
-                        hintStyle: GoogleFonts.libreBaskerville(color: brassPrimary.withOpacity(0.5)),
+                        hintStyle: GoogleFonts.libreBaskerville(color: primary.withOpacity(0.5)),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                         counterText: '',
@@ -493,7 +680,7 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.send, color: brassPrimary),
+                    icon: Icon(Icons.send, color: primary),
                     onPressed: () => _handleInput(_textController.text),
                   ),
                 ],
@@ -503,28 +690,28 @@ class _FeedbackChatDialogState extends State<FeedbackChatDialog> {
             // Send Report Button
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: const BoxDecoration(
-                color: mahoganyDark,
+              decoration: BoxDecoration(
+                color: cardBg,
               ),
               child: SizedBox(
                 width: double.infinity,
                 height: 60,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: brassPrimary,
-                    foregroundColor: leatherDark,
+                    backgroundColor: primary,
+                    foregroundColor: textInverse,
                     elevation: 8,
                     shadowColor: Colors.black87,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(color: brassDark, width: 3),
+                      side: BorderSide(color: primaryDark, width: 3),
                     ),
                   ),
-                  onPressed: _userName != null
+                  onPressed: (_userName != null && !_isTyping && !_feedbackSent)
                     ? () => _sendEmail(sendToUser: _userEmail != null)
                     : null,
                   child: Text(
-                    'SEND REPORT',
+                    _isTyping ? 'SENDING...' : (_feedbackSent ? 'THANKS!' : 'SEND REPORT'),
                     style: GoogleFonts.rye(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,

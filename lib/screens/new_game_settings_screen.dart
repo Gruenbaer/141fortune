@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../services/player_service.dart';
 import '../models/game_settings.dart';
 import '../l10n/app_localizations.dart';
+import '../widgets/steampunk_widgets.dart';
+import '../widgets/player_name_input_dialog.dart';
 
 class NewGameSettingsScreen extends StatefulWidget {
   final Function(GameSettings) onStartGame;
@@ -18,122 +19,13 @@ class NewGameSettingsScreen extends StatefulWidget {
 
 class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
   late GameSettings _settings;
-  final _player1Controller = TextEditingController();
-  final _player2Controller = TextEditingController();
-  final PlayerService _playerService = PlayerService();
-  List<Player> _players = [];
   double _raceSliderValue = 100;
-  Player? _player1;
-  Player? _player2;
 
   @override
   void initState() {
     super.initState();
     _settings = GameSettings();
-    // Start with empty fields - "Player 1" and "Player 2" are just defaults for settings
-    _player1Controller.text = '';
-    _player2Controller.text = '';
     _raceSliderValue = _settings.raceToScore.toDouble();
-    _loadPlayers();
-    
-    _player1Controller.addListener(_onPlayer1Changed);
-    _player2Controller.addListener(_onPlayer2Changed);
-  }
-
-  Future<void> _loadPlayers() async {
-    final players = await _playerService.getAllPlayers();
-    setState(() {
-      _players = players;
-    });
-  }
-
-  void _onPlayer1Changed() {
-    setState(() {
-      _player1 = _players.cast<Player?>().firstWhere(
-        (p) => p?.name.toLowerCase() == _player1Controller.text.trim().toLowerCase(),
-        orElse: () => null,
-      );
-      _settings = _settings.copyWith(player1Name: _player1Controller.text);
-    });
-  }
-
-  void _onPlayer2Changed() {
-    setState(() {
-      _player2 = _players.cast<Player?>().firstWhere(
-        (p) => p?.name.toLowerCase() == _player2Controller.text.trim().toLowerCase(),
-        orElse: () => null,
-      );
-      _settings = _settings.copyWith(player2Name: _player2Controller.text);
-    });
-  }
-
-  Future<void> _createPlayer1() async {
-    final name = _player1Controller.text.trim();
-    if (name.isEmpty) return;
-    
-    try {
-      await _playerService.createPlayer(name);
-      await _loadPlayers();
-      
-      // Trigger state update to show checkmark
-      setState(() {
-        _player1 = _players.cast<Player?>().firstWhere(
-          (p) => p?.name.toLowerCase() == name.toLowerCase(),
-          orElse: () => null,
-        );
-      });
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Player "$name" created ✓')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
-        );
-      }
-    }
-  }
-
-  Future<void> _createPlayer2() async {
-    final name = _player2Controller.text.trim();
-    if (name.isEmpty) return;
-    
-    try {
-      await _playerService.createPlayer(name);
-      await _loadPlayers();
-      
-      // Trigger state update to show checkmark
-      setState(() {
-        _player2 = _players.cast<Player?>().firstWhere(
-          (p) => p?.name.toLowerCase() == name.toLowerCase(),
-          orElse: () => null,
-        );
-      });
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${AppLocalizations.of(context).playerCreated}: "$name"')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
-        );
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _player1Controller.removeListener(_onPlayer1Changed);
-    _player2Controller.removeListener(_onPlayer2Changed);
-    _player1Controller.dispose();
-    _player2Controller.dispose();
-    super.dispose();
   }
 
   @override
@@ -157,7 +49,7 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                 children: [
                   Text(
                     l10n.gameType,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   SwitchListTile(
@@ -186,7 +78,7 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                 children: [
                   Text(
                     l10n.raceTo,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   
@@ -312,51 +204,28 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                   const SizedBox(height: 16),
                   
                   // Player 1
-                  Autocomplete<String>(
-                    optionsBuilder: (textEditingValue) {
-                      if (textEditingValue.text.isEmpty) {
-                        return const Iterable<String>.empty();
-                      }
-                      return _players
-                          .map((p) => p.name)
-                          .where((name) => name.toLowerCase().contains(
-                              textEditingValue.text.toLowerCase()));
-                    },
-                    onSelected: (name) {
-                      setState(() {
-                        _player1Controller.text = name;
-                      });
-                    },
-                    fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
-                      // Sync logic removed to prevent cursor jumping bug
-
-                      
-                      return TextField(
-                        controller: controller,
-                        maxLength: 30,
-                        maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                        focusNode: focusNode,
-                        textCapitalization: TextCapitalization.words,
-                        decoration: InputDecoration(
-                          labelText: 'Player 1',
-                          hintText: 'Enter or select player',
-                          border: const OutlineInputBorder(),
-                          counterText: '',  // Hide character counter
-                          suffixIcon: _player1 != null
-                              ? const Icon(Icons.check_circle, color: Colors.green)
-                              : (controller.text.trim().isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.add_circle, color: Colors.blue),
-                                      tooltip: 'Create Player',
-                                      onPressed: _createPlayer1,
-                                    )
-                                  : null),
-                        ),
-                        onChanged: (value) {
-                          _player1Controller.text = value;
-                        },
-                        onSubmitted: (_) => onSubmitted(),
+                  ListTile(
+                    title: const Text('Player 1'),
+                    subtitle: Text(
+                      _settings.player1Name.isEmpty ? 'Tap to select' : _settings.player1Name,
+                      style: TextStyle(
+                        color: _settings.player1Name.isEmpty ? Colors.grey : null,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.edit),
+                    onTap: () async {
+                      final name = await PlayerNameInputDialog.show(
+                        context,
+                        title: 'Player 1',
+                        initialName: _settings.player1Name,
+                        labelText: 'Player 1',
+                        hintText: 'Enter or select player',
                       );
+                      if (name != null) {
+                        setState(() {
+                          _settings = _settings.copyWith(player1Name: name);
+                        });
+                      }
                     },
                   ),
                   
@@ -388,51 +257,28 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                   const SizedBox(height: 24),
                   
                   // Player 2
-                  Autocomplete<String>(
-                    optionsBuilder: (textEditingValue) {
-                      if (textEditingValue.text.isEmpty) {
-                        return const Iterable<String>.empty();
-                      }
-                      return _players
-                          .map((p) => p.name)
-                          .where((name) => name.toLowerCase().contains(
-                              textEditingValue.text.toLowerCase()));
-                    },
-                    onSelected: (name) {
-                      setState(() {
-                        _player2Controller.text = name;
-                      });
-                    },
-                    fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
-                      // Sync logic removed to prevent cursor jumping bug
-
-                      
-                      return TextField(
-                        controller: controller,
-                        maxLength: 30,
-                        maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                        focusNode: focusNode,
-                        textCapitalization: TextCapitalization.words,
-                        decoration: InputDecoration(
-                          labelText: 'Player 2',
-                          hintText: 'Enter or select player',
-                          border: const OutlineInputBorder(),
-                          counterText: '',  // Hide character counter
-                          suffixIcon: _player2 != null
-                              ? const Icon(Icons.check_circle, color: Colors.green)
-                              : (controller.text.trim().isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.add_circle, color: Colors.blue),
-                                      tooltip: 'Create Player',
-                                      onPressed: _createPlayer2,
-                                    )
-                                  : null),
-                        ),
-                        onChanged: (value) {
-                          _player2Controller.text = value;
-                        },
-                        onSubmitted: (_) => onSubmitted(),
+                  ListTile(
+                    title: const Text('Player 2'),
+                    subtitle: Text(
+                      _settings.player2Name.isEmpty ? 'Tap to select' : _settings.player2Name,
+                      style: TextStyle(
+                        color: _settings.player2Name.isEmpty ? Colors.grey : null,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.edit),
+                    onTap: () async {
+                      final name = await PlayerNameInputDialog.show(
+                        context,
+                        title: 'Player 2',
+                        initialName: _settings.player2Name,
+                        labelText: 'Player 2',
+                        hintText: 'Enter or select player',
                       );
+                      if (name != null) {
+                        setState(() {
+                          _settings = _settings.copyWith(player2Name: name);
+                        });
+                      }
                     },
                   ),
                   
@@ -496,20 +342,15 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
           const SizedBox(height: 32),
 
           // Start Game Button
-          SizedBox(
-            height: 56,
-            child: ElevatedButton(
-              onPressed: _startGame,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green[700],
-                foregroundColor: Colors.white,
-                elevation: 4,
-              ),
-              child: const Text(
-                'Start Game',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
+          SteampunkButton(
+            label: 'START GAME',
+            icon: Icons.play_circle_fill,
+            onPressed: _startGame,
+            backgroundGradientColors: [
+              Colors.green.shade900,
+              Colors.green.shade700,
+            ],
+            textColor: Colors.white,
           ),
         ],
       ),
@@ -539,9 +380,8 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
     );
   }
 
-  Widget _buildInningsButton(int value, {String? label}) {
+  Widget _buildInningsButton(int value) {
     final isSelected = _settings.maxInnings == value;
-    final displayText = label ?? value.toString();
     
     return Expanded(
       child: OutlinedButton(
@@ -556,61 +396,21 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
           side: BorderSide(color: Colors.blue.shade700, width: 2),
         ),
         child: Text(
-          displayText,
+          value.toString(),
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
     );
   }
 
-  Future<void> _editMaxInnings() async {
-    final controller = TextEditingController(
-      text: _settings.maxInnings == 0 ? '' : '${_settings.maxInnings}',
-    );
-    
-    final result = await showDialog<int>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Max Innings'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Innings (0 = unlimited)',
-            hintText: '0',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              final value = int.tryParse(controller.text) ?? 0;
-              Navigator.pop(context, value);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-
-    if (result != null) {
-      setState(() {
-        _settings = _settings.copyWith(maxInnings: result);
-      });
-    }
-  }
-
   void _startGame() {
     // Use entered names or defaults if empty
-    final player1Name = _player1Controller.text.trim().isEmpty 
+    final player1Name = _settings.player1Name.isEmpty 
         ? 'Player 1' 
-        : _player1Controller.text.trim();
-    final player2Name = _player2Controller.text.trim().isEmpty 
+        : _settings.player1Name;
+    final player2Name = _settings.player2Name.isEmpty 
         ? 'Player 2' 
-        : _player2Controller.text.trim();
+        : _settings.player2Name;
     
     final finalSettings = _settings.copyWith(
       player1Name: player1Name,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../theme/steampunk_theme.dart';
+import '../theme/steampunk_theme.dart'; // Keep for legacy constants if needed, or remove?
+import '../theme/fortune_theme.dart';
 
 class SteampunkBackground extends StatelessWidget {
   final Widget child;
@@ -8,14 +9,19 @@ class SteampunkBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = FortuneColors.of(context);
     return Container(
-      decoration: const BoxDecoration(
-        color: SteampunkTheme.mahoganyDark, // Fallback
+      decoration: BoxDecoration(
+        color: colors.backgroundMain, 
         image: DecorationImage(
-          image: AssetImage('assets/images/ui/background.png'),
+          // Use background image only if we are in Steampunk mode (heuristic: primary is brass)
+          // Or just always use it? Let's hide it for Cyberpunk (Black/Blue background).
+          // We can check brightness or specific color.
+          image: const AssetImage('assets/images/ui/background.png'),
           fit: BoxFit.cover,
-          colorFilter: ColorFilter.mode(
-            Colors.black38, // Darken slightly for readability
+          opacity: colors.backgroundMain == SteampunkTheme.mahoganyDark ? 1.0 : 0.05, // Almost hide in Cyberpunk
+          colorFilter: const ColorFilter.mode(
+            Colors.black38,
             BlendMode.darken,
           ),
         ),
@@ -26,7 +32,8 @@ class SteampunkBackground extends StatelessWidget {
 }
 
 class SteampunkButton extends StatefulWidget {
-  final String label;
+  final String? label;
+  final Widget? child;
   final VoidCallback onPressed;
   final IconData? icon;
   final Color? textColor;
@@ -34,12 +41,13 @@ class SteampunkButton extends StatefulWidget {
 
   const SteampunkButton({
     super.key,
-    required this.label,
+    this.label,
+    this.child,
     required this.onPressed,
     this.icon,
     this.textColor,
     this.backgroundGradientColors,
-  });
+  }) : assert(label != null || child != null, 'Label or Child must be provided');
 
   @override
   State<SteampunkButton> createState() => _SteampunkButtonState();
@@ -67,6 +75,8 @@ class _SteampunkButtonState extends State<SteampunkButton> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
+    final colors = FortuneColors.of(context);
+    
     return GestureDetector(
       onTapDown: (_) => _controller.forward(),
       onTapUp: (_) {
@@ -79,25 +89,35 @@ class _SteampunkButtonState extends State<SteampunkButton> with SingleTickerProv
         child: Container(
           width: double.infinity,
           margin: const EdgeInsets.symmetric(vertical: 8),
-          constraints: const BoxConstraints(maxWidth: 400, minHeight: 80, maxHeight: 80),
+          constraints: const BoxConstraints(maxWidth: 400, minHeight: 60), // Reduced minHeight, removed maxHeight
           child: CustomPaint(
-            painter: BrassFramePainter(),
+            painter: colors.themeId == 'cyberpunk' 
+                ? CyberpunkFramePainter(colors) 
+                : BrassFramePainter(colors),
             child: Container(
-              // Inner content area (inside the brass frame)
-              margin: const EdgeInsets.all(12), // Space for the brass border
+              // Inner content area
+              margin: const EdgeInsets.all(12),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              alignment: Alignment.center, // Strictly center the child content
               decoration: BoxDecoration(
-                // Cream/beige background like reference, or custom
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: widget.backgroundGradientColors ?? const [
-                    Color(0xFFF5E6D3), // Light cream
-                    Color(0xFFE8D4B8), // Darker cream/beige
+                  colors: widget.backgroundGradientColors ?? [
+                    colors.backgroundCard.withOpacity(0.8),
+                    colors.backgroundCard,
                   ],
                 ),
-                borderRadius: BorderRadius.circular(12),
-                // Inner shadow for depth
+                // Cyberpunk uses cut corners (Beveled), Steampunk uses Rounded
+                borderRadius: colors.themeId == 'cyberpunk' 
+                    ? BorderRadius.zero 
+                    : BorderRadius.circular(12),
+                
+                // For Cyberpunk, we might want a clipPath for cut corners, but for now simple box
+                border: colors.themeId == 'cyberpunk' 
+                    ? Border.all(color: colors.primary.withOpacity(0.3)) 
+                    : null,
+                
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.2),
@@ -107,39 +127,33 @@ class _SteampunkButtonState extends State<SteampunkButton> with SingleTickerProv
                   ),
                 ],
               ),
-              child: Row(
+              child: widget.child ?? Row(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center, // Ensure vertical centering
                 children: [
                   if (widget.icon != null) ...[
                     Icon(
                       widget.icon, 
-                      color: widget.textColor ?? SteampunkTheme.leatherDark,
+                      color: widget.textColor ?? colors.primary,
                       size: 24,
                     ),
                     const SizedBox(width: 12),
                   ],
                   Flexible(
                     child: Text(
-                      widget.label.toUpperCase(),
+                      widget.label?.toUpperCase() ?? '',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: widget.textColor ?? SteampunkTheme.leatherDark,
-                        letterSpacing: 1.0,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
+                        color: widget.textColor ?? const Color(0xFFF0F0F0), // Near white for contrast
+                        letterSpacing: 0.5, // Reduced from 1.0 for space saving
                         shadows: [
-                          // Embossed effect
                           Shadow(
-                            color: Colors.white.withOpacity(0.5),
-                            offset: const Offset(0, 1),
-                            blurRadius: 1,
-                          ),
-                          Shadow(
-                            color: Colors.black.withOpacity(0.3),
-                            offset: const Offset(0, -1),
-                            blurRadius: 1,
+                            color: Colors.black.withOpacity(0.8), // Stronger shadow
+                            offset: const Offset(1, 1),
+                            blurRadius: 2,
                           ),
                         ],
+                        fontWeight: FontWeight.w900, // Black weight
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 2,
@@ -156,10 +170,15 @@ class _SteampunkButtonState extends State<SteampunkButton> with SingleTickerProv
   }
 }
 
-// Custom painter for ornate brass frame with rivets
+// Custom painter (Brass for Steampunk)
 class BrassFramePainter extends CustomPainter {
+  final FortuneColors colors;
+  
+  BrassFramePainter(this.colors);
+
   @override
   void paint(Canvas canvas, Size size) {
+    // ... existing brass paint logic ...
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
     final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(16));
     
@@ -171,21 +190,21 @@ class BrassFramePainter extends CustomPainter {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
     );
     
-    // Brass frame gradient (main border)
-    final brassPaint = Paint()
+    // Frame Gradient
+    final framePaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          SteampunkTheme.brassBright,
-          SteampunkTheme.brassPrimary,
-          SteampunkTheme.brassDark,
-          SteampunkTheme.brassPrimary,
+          colors.primaryBright,
+          colors.primary,
+          colors.primaryDark,
+          colors.primary,
         ],
         stops: const [0.0, 0.3, 0.7, 1.0],
       ).createShader(rect);
     
-    canvas.drawRRect(rrect, brassPaint);
+    canvas.drawRRect(rrect, framePaint);
     
     // Dark inner border for depth
     final innerRect = rect.deflate(4);
@@ -193,12 +212,12 @@ class BrassFramePainter extends CustomPainter {
     canvas.drawRRect(
       innerRRect,
       Paint()
-        ..color = const Color(0xFF3D2817)
+        ..color = colors.backgroundMain
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2,
     );
     
-    // Highlight edge on top-left
+    // Highlight edge
     final highlightPath = Path()
       ..addRRect(RRect.fromRectAndRadius(
         rect.deflate(2),
@@ -208,51 +227,90 @@ class BrassFramePainter extends CustomPainter {
     canvas.drawPath(
       highlightPath,
       Paint()
-        ..color = SteampunkTheme.brassBright.withOpacity(0.6)
+        ..color = colors.primaryBright.withOpacity(0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+      );
+      
+      // Rivets
+      _drawRivet(canvas, const Offset(12, 12));
+      _drawRivet(canvas, Offset(size.width - 12, 12));
+      _drawRivet(canvas, Offset(12, size.height - 12));
+      _drawRivet(canvas, Offset(size.width - 12, size.height - 12));
+    }
+    
+    void _drawRivet(Canvas canvas, Offset center) {
+      canvas.drawCircle(center, 4, Paint()..color = colors.primaryDark..style = PaintingStyle.fill);
+      canvas.drawCircle(center.translate(-0.5, -0.5), 4, Paint()..shader = RadialGradient(colors: [colors.primaryBright.withOpacity(0.8), Colors.transparent], stops: const [0.3, 1.0]).createShader(Rect.fromCircle(center: center, radius: 4)));
+      canvas.drawLine(center.translate(-2, 0), center.translate(2, 0), Paint()..color = Colors.black.withOpacity(0.7)..strokeWidth = 1..strokeCap = StrokeCap.round);
+    }
+  
+    @override
+    bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// Tech/HUD Painter for Cyberpunk
+class CyberpunkFramePainter extends CustomPainter {
+  final FortuneColors colors;
+  
+  CyberpunkFramePainter(this.colors);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    
+    // Cut corners (Chamfered)
+    const double cut = 12.0;
+    
+    final path = Path()
+      ..moveTo(cut, 0)
+      ..lineTo(size.width - cut, 0)
+      ..lineTo(size.width, cut)
+      ..lineTo(size.width, size.height - cut)
+      ..lineTo(size.width - cut, size.height)
+      ..lineTo(cut, size.height)
+      ..lineTo(0, size.height - cut)
+      ..lineTo(0, cut)
+      ..close();
+      
+    // 1. Fill Background (Dark Matrix mostly handled by container, but frame needs body)
+    // Actually we strictly paint the border frame here.
+    
+    // 2. Neon Border Glow
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = colors.primary
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4), // Glow
+    );
+    
+    // 3. Sharp Neon Border
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = colors.primary
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
     
-    // Corner rivets (decorative bolts)
-    _drawRivet(canvas, const Offset(12, 12));
-    _drawRivet(canvas, Offset(size.width - 12, 12));
-    _drawRivet(canvas, Offset(12, size.height - 12));
-    _drawRivet(canvas, Offset(size.width - 12, size.height - 12));
-  }
-  
-  void _drawRivet(Canvas canvas, Offset center) {
-    // Outer rivet circle
-    canvas.drawCircle(
-      center,
-      4,
-      Paint()
-        ..color = SteampunkTheme.brassDark
-        ..style = PaintingStyle.fill,
-    );
+    // 4. Accent Corners (Thicker lines at corners)
+    final cornerPaint = Paint()
+      ..color = colors.secondary // Magenta accents
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+      
+    // Top Left
+    canvas.drawPath(Path()..moveTo(0, cut + 10)..lineTo(0, cut)..lineTo(cut, 0)..lineTo(cut + 10, 0), cornerPaint);
+    // Bottom Right
+    canvas.drawPath(Path()..moveTo(size.width, size.height - cut - 10)..lineTo(size.width, size.height - cut)..lineTo(size.width - cut, size.height)..lineTo(size.width - cut - 10, size.height), cornerPaint);
     
-    // Highlight
-    canvas.drawCircle(
-      center.translate(-0.5, -0.5),
-      4,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [
-            SteampunkTheme.brassBright.withOpacity(0.8),
-            Colors.transparent,
-          ],
-          stops: const [0.3, 1.0],
-        ).createShader(Rect.fromCircle(center: center, radius: 4)),
-    );
-    
-    // Center screw slot
-    canvas.drawLine(
-      center.translate(-2, 0),
-      center.translate(2, 0),
-      Paint()
-        ..color = Colors.black.withOpacity(0.7)
-        ..strokeWidth = 1
-        ..strokeCap = StrokeCap.round,
-    );
+    // 5. Tech Bits (Decorations)
+    final decorPaint = Paint()..color = colors.primary.withOpacity(0.5)..style = PaintingStyle.fill;
+    // Small rects
+    canvas.drawRect(Rect.fromLTWH(size.width / 2 - 20, size.height - 4, 40, 2), decorPaint);
+    canvas.drawRect(Rect.fromLTWH(size.width / 2 - 20, 2, 40, 2), decorPaint);
   }
 
   @override

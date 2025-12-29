@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../models/game_state.dart';
 import '../models/player.dart'; // Explicit import needed after aliasing player_service
 import '../models/game_settings.dart';
@@ -16,11 +17,18 @@ import '../services/game_history_service.dart';
 import 'settings_screen.dart';
 import 'details_screen.dart';
 import '../theme/steampunk_theme.dart';
+import '../theme/fortune_theme.dart';
 import '../widgets/steampunk_widgets.dart';
 import '../widgets/victory_splash.dart';
+import '../widgets/game_clock.dart';
+import '../widgets/pause_overlay.dart';
 import 'new_game_settings_screen.dart';
 import 'package:google_fonts/google_fonts.dart'; // For Arial alternative (Lato/Roboto) if Arial not available, but user said Arial.
 import '../services/player_service.dart' as stats; // For stats fetching
+import '../widgets/foul_overlays.dart';
+import '../widgets/safe_shield_overlay.dart'; // Flying Penalty Animation
+import '../widgets/re_rack_overlay.dart';
+import '../utils/ui_utils.dart'; // Zoom Dialog Helper
 
 class GameScreen extends StatefulWidget {
   final GameSettings settings;
@@ -39,7 +47,7 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Achievement? _achievementToShow;
   final GameHistoryService _historyService = GameHistoryService();
   late String _gameId; // Unique ID for this game
@@ -49,6 +57,117 @@ class _GameScreenState extends State<GameScreen> {
   // Historical stats for display
   stats.Player? _p1Stats;
   stats.Player? _p2Stats;
+
+  // Rack Animation Controller
+  late AnimationController _rackAnimationController;
+
+  // Keys for Player Plaques (to track position for Flying Penalty)
+  final GlobalKey<PlayerPlaqueState> _p1PlaqueKey = GlobalKey<PlayerPlaqueState>();
+  final GlobalKey<PlayerPlaqueState> _p2PlaqueKey = GlobalKey<PlayerPlaqueState>();
+
+  // Serial Event Processing
+  final List<GameEvent> _localEventQueue = [];
+  bool _isProcessingEvent = false;
+
+  void _processNextEvent() {
+    if (_isProcessingEvent || _localEventQueue.isEmpty) return;
+
+    _isProcessingEvent = true;
+    final event = _localEventQueue.removeAt(0);
+
+    if (event is FoulEvent) {
+      // Play Animation
+       _showFlyingPenalty(
+         event.points, 
+         event.message, 
+         event.player, 
+         () {
+           _isProcessingEvent = false;
+           _processNextEvent(); // Loop
+         },
+         positivePoints: event.positivePoints,
+         penalty: event.penalty,
+       );
+    } else if (event is WarningEvent) {
+      // Skip WarningEvent dialogs entirely - no more Break Foul info
+      _isProcessingEvent = false;
+      _processNextEvent();
+    } else if (event is DecisionEvent) {
+       // Show Decision Dialog
+       showZoomDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: SteampunkTheme.mahoganyDark,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: SteampunkTheme.brassPrimary, width: 2)
+          ),
+          title: Text(
+              event.title, 
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: SteampunkTheme.brassBright, fontWeight: FontWeight.bold)
+          ),
+          content: Text(
+              event.message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: SteampunkTheme.steamWhite)
+          ),
+          actionsAlignment: MainAxisAlignment.spaceEvenly,
+          actions: [
+            // Option 1 (Player 1)
+            SteampunkButton(
+               onPressed: () {
+                  Navigator.of(context).pop();
+                  event.onOptionSelected(0);
+                  _isProcessingEvent = false;
+                  _processNextEvent();
+               },
+               label: event.options[0],
+            ),
+            const SizedBox(width: 8),
+            // Option 2 (Player 2)
+            SteampunkButton(
+               onPressed: () {
+                  Navigator.of(context).pop();
+                  event.onOptionSelected(1);
+                  _isProcessingEvent = false;
+                  _processNextEvent();
+               },
+               label: event.options[1],
+            ),
+          ],
+        ),
+       );
+    } else if (event is ReRackEvent) {
+      // Show Re-Rack Overlay
+      _showReRackSplash(event.type, () {
+         // After overlay finishes, trigger Sequential Ball Fade-in
+         if (mounted) {
+           _rackAnimationController.forward(from: 0.0);
+         }
+        _isProcessingEvent = false;
+        _processNextEvent();
+      });
+    } else if (event is SafeEvent) {
+       _showSafeShield();
+       // Safe Shield handles its own duration, but we should unblock queue
+       // Wait 1s? Or just unblock immediately? SafeShield is non-blocking visually?
+       // Usually _showSafeShield inserts overlay. We can wait a bit or direct.
+       // Let's assume non-blocking flow for now, or wait 1s.
+       Future.delayed(const Duration(milliseconds: 1000), () {
+          _isProcessingEvent = false;
+          _processNextEvent();
+       });
+    } else {
+       // Unknown?
+       _isProcessingEvent = false;
+       _processNextEvent();
+    }
+  }
+  
+  // Overlay Entry for Penalty Animation
+  OverlayEntry? _penaltyOverlayEntry;
 
   Future<void> _loadPlayerStats() async {
     final gameState = Provider.of<GameState>(context, listen: false);
@@ -188,12 +307,25 @@ class _GameScreenState extends State<GameScreen> {
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final achievementManager = Provider.of<AchievementManager>(context, listen: false);
-      achievementManager?.onAchievementUnlocked = (achievement) {
-        setState(() {
-          _achievementToShow = achievement;
-        });
-      };
+      if (achievementManager != null) {
+        achievementManager.onAchievementUnlocked = (achievement) {
+          setState(() {
+            _achievementToShow = achievement;
+          });
+        };
+      }
     });
+
+
+    _rackAnimationController = AnimationController(
+       vsync: this,
+       duration: const Duration(milliseconds: 1500),
+    );
+     // Start visible by default
+    _rackAnimationController.value = 1.0;
+    
+    // Enable wakelock to keep screen awake during gameplay
+    WakelockPlus.enable();
   }
 
   @override
@@ -215,15 +347,25 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   @override
+  void dispose() {
+    _rackAnimationController.dispose();
+    // Disable wakelock when leaving game screen
+    WakelockPlus.disable();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Listen to provider for Undo/Redo button state
     final gameState = Provider.of<GameState>(context);
+    final colors = FortuneColors.of(context);
+    final theme = Theme.of(context);
 
     // Helper functions for Drawer actions
     void showRestartConfirmation() {
     final l10n = AppLocalizations.of(context);
     Navigator.pop(context); // Close drawer
-    showDialog(
+    showZoomDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.restartGame),
@@ -248,13 +390,13 @@ class _GameScreenState extends State<GameScreen> {
     void showRulesPopup() {
     final l10n = AppLocalizations.of(context);
     Navigator.pop(context); // Close drawer
-    showDialog(
+    showZoomDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.gameRules),
         content: SingleChildScrollView(
           child: Text(
-            l10n.translate('gameRulesContent'), // Will add full rules text
+            l10n.translate('gameRulesContent'), 
           ),
         ),
         actions: [
@@ -274,7 +416,7 @@ class _GameScreenState extends State<GameScreen> {
           onPopInvokedWithResult: (didPop, result) async {
             if (didPop) return;
             final l10n = AppLocalizations.of(context);
-            final shouldExit = await showDialog<bool>(
+            final shouldExit = await showZoomDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
                 title: Text(l10n.exitGameTitle),
@@ -306,43 +448,23 @@ class _GameScreenState extends State<GameScreen> {
           child: Scaffold(
             extendBodyBehindAppBar: true, 
             appBar: AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              // App name in top-left
-              leading: Padding(
-                padding: const EdgeInsets.only(left: 8.0),
-                child: Center(
-                  child: Text(
-                    '14.1 Fortune',
-                    style: GoogleFonts.rye(
-                      fontSize: 14,
-                      color: SteampunkTheme.brassPrimary,
-                      fontWeight: FontWeight.bold,
-                      shadows: [
-                        const Shadow(blurRadius: 3, color: Colors.black87, offset: Offset(1, 1)),
-                        const Shadow(blurRadius: 6, color: Colors.black54, offset: Offset(0, 0)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // Race to XX in center
+              // Title moved to standard 'title' property for better layout control
               title: Text(
-                'Race to ${gameState.raceToScore}',
-                style: GoogleFonts.rye(
-                  fontSize: 18,
-                  color: SteampunkTheme.brassPrimary,
+                'Straight Pool',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: colors.primary,
                   fontWeight: FontWeight.bold,
                   shadows: [
-                    const Shadow(blurRadius: 2, color: Colors.black, offset: Offset(1, 1)),
+                    Shadow(blurRadius: 3, color: Colors.black87, offset: const Offset(1, 1)),
+                    Shadow(blurRadius: 6, color: colors.primary.withOpacity(0.5), offset: const Offset(0, 0)),
                   ],
                 ),
               ),
-              centerTitle: true,
+              leading: null, // Allow default drawer icon if needed, or remove if strictly no menu desired
               actions: [
                 IconButton(
                   icon: const Icon(Icons.analytics_outlined),
-                  color: SteampunkTheme.brassPrimary,
+                  color: colors.primary,
                   tooltip: 'Details',
                   onPressed: () {
                     Navigator.push(
@@ -355,7 +477,7 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.settings),
-                  color: SteampunkTheme.brassPrimary,
+                  color: colors.primary,
                   tooltip: 'Settings',
                   onPressed: () async {
                     final updateSettings = Provider.of<Function(GameSettings)>(context, listen: false);
@@ -388,14 +510,24 @@ class _GameScreenState extends State<GameScreen> {
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.undo),
-                  color: SteampunkTheme.brassPrimary,
+                  icon: Icon(
+                    Icons.undo,
+                    shadows: colors.themeId == 'cyberpunk' ? [
+                       BoxShadow(color: colors.primary, blurRadius: 10, spreadRadius: 2),
+                    ] : [],
+                  ),
+                  color: colors.primary,
                   tooltip: 'Undo',
                   onPressed: gameState.canUndo ? gameState.undo : null,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.redo),
-                  color: SteampunkTheme.brassPrimary,
+                  icon: Icon(
+                    Icons.redo,
+                    shadows: colors.themeId == 'cyberpunk' ? [
+                       BoxShadow(color: colors.primary, blurRadius: 10, spreadRadius: 2),
+                    ] : [],
+                  ),
+                  color: colors.primary,
                   tooltip: 'Redo',
                   onPressed: gameState.canRedo ? gameState.redo : null,
                 ),
@@ -433,9 +565,12 @@ class _GameScreenState extends State<GameScreen> {
               child: SafeArea(
                 child: Consumer<GameState>(
                   builder: (context, gameState, child) {
-                    if (gameState.showThreeFoulPopup) {
+                    // Process Game Events (Animations)
+                    final events = gameState.consumeEvents();
+                    if (events.isNotEmpty) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _show3FoulPopup(context, gameState);
+                        _localEventQueue.addAll(events);
+                        _processNextEvent();
                       });
                     }
 
@@ -443,22 +578,38 @@ class _GameScreenState extends State<GameScreen> {
                     if (hasWinner && !_isCompletedSaved) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         _saveCompletedGame(gameState);
-                        // Navigate to victory screen
+                        // Navigate to victory screen with Zoom Transition
                         Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (context) => VictorySplash(
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) => VictorySplash(
                               winner: gameState.winner!,
                               loser: gameState.players.firstWhere((p) => p != gameState.winner),
                               raceToScore: gameState.raceToScore,
                               matchLog: gameState.matchLog,
+                              elapsedDuration: gameState.elapsedDuration,
                               onNewGame: () {
-                                // Pop all routes to return to home screen
                                 Navigator.of(context).popUntil((route) => route.isFirst);
                               },
                               onExit: () {
                                 Navigator.of(context).popUntil((route) => route.isFirst);
                               },
                             ),
+                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                              // Custom Zoom + Fade Transition
+                              var curve = Curves.easeOutBack;
+                              var scaleTween = Tween<double>(begin: 0.8, end: 1.0)
+                                  .chain(CurveTween(curve: curve));
+                              var fadeTween = Tween<double>(begin: 0.0, end: 1.0);
+
+                              return FadeTransition(
+                                opacity: animation.drive(fadeTween),
+                                child: ScaleTransition(
+                                  scale: animation.drive(scaleTween),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            transitionDuration: const Duration(milliseconds: 500), // Slightly slower for Victory
                           ),
                         );
                       });
@@ -466,23 +617,90 @@ class _GameScreenState extends State<GameScreen> {
 
                     return Column(
                       children: [
+                        // Race to XX / Inning Counter - Fades from prominent to compact
+                        AnimatedOpacity(
+                          opacity: !gameState.gameStarted ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 800),
+                          child: !gameState.gameStarted ? Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'Race to ${gameState.raceToScore}',
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                color: colors.accent,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 32,
+                                shadows: [
+                                  Shadow(blurRadius: 4, color: Colors.black, offset: Offset(2, 2)),
+                                  Shadow(blurRadius: 8, color: colors.accent.withOpacity(0.6)),
+                                ],
+                              ),
+                            ),
+                          ) : const SizedBox.shrink(),
+                        ),
+                        AnimatedOpacity(
+                          opacity: gameState.gameStarted ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 800),
+                          child: gameState.gameStarted ? Container(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Left: Inning label
+                                Text(
+                                  'Inning: ',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    color: colors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                // Center: Inning number (larger, prominent)
+                                Text(
+                                  '${gameState.players.firstWhere((p) => p.isActive).currentInning}',
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    color: colors.accent,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 24,
+                                    shadows: [
+                                      Shadow(blurRadius: 3, color: Colors.black, offset: Offset(1, 1)),
+                                    ],
+                                  ),
+                                ),
+                                // Spacer
+                                const SizedBox(width: 24),
+                                // Right: Race to (smaller)
+                                Text(
+                                  'Race to ${gameState.raceToScore}',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    color: colors.primary.withOpacity(0.8),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ) : const SizedBox.shrink(),
+                        ),
                         // 1. Players & Scores Header
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: const BoxDecoration(
-                            color: SteampunkTheme.mahoganyDark,
-                            border: Border(bottom: BorderSide(color: SteampunkTheme.brassPrimary, width: 2)),
+                          decoration: BoxDecoration(
+                            color: colors.backgroundCard,
+                            border: Border(bottom: BorderSide(color: colors.primary, width: 2)),
                           ),
                           child: Row(
                             children: [
                               Expanded(
-                                child: PlayerPlaque(player: gameState.players[0], raceToScore: gameState.raceToScore, isLeft: true),
+                                child: PlayerPlaque(
+                                  key: _p1PlaqueKey,
+                                  player: gameState.players[0], 
+                                  raceToScore: gameState.raceToScore, 
+                                  isLeft: true
+                                ),
                               ),
                               // Switch Button or Spacer
                               if (!gameState.gameStarted && gameState.matchLog.isEmpty)
                                 IconButton(
                                   icon: const Icon(Icons.swap_horiz, size: 28),
-                                  color: SteampunkTheme.amberGlow,
+                                  color: colors.accent,
                                   onPressed: gameState.swapStartingPlayer,
                                   tooltip: 'Swap Sides',
                                   padding: EdgeInsets.zero,
@@ -491,7 +709,12 @@ class _GameScreenState extends State<GameScreen> {
                               else
                                 const SizedBox(width: 12),
                               Expanded(
-                                child: PlayerPlaque(player: gameState.players[1], raceToScore: gameState.raceToScore, isLeft: false),
+                                child: PlayerPlaque(
+                                  key: _p2PlaqueKey,
+                                  player: gameState.players[1], 
+                                  raceToScore: gameState.raceToScore, 
+                                  isLeft: false
+                                ),
                               ),
                             ],
                           ),
@@ -529,25 +752,33 @@ class _GameScreenState extends State<GameScreen> {
                             ),
                           ),
 
-                        // 3. Score Sheet (Match Log) - Removed per user request
-                        // It is now available in "Details" (Stats Icon) and Victory Screen.
+                        // CLOCK
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                          child: GameClock(),
+                        ),
 
-                        // 4. Notification / Last Action (Optional Overlay or smaller)
-                        if (gameState.lastAction != null)
-                           Container(
-                              width: double.infinity,
-                              color: SteampunkTheme.brassPrimary,
-                              padding: const EdgeInsets.all(4),
-                              child: Text(
-                                gameState.lastAction!.toUpperCase(),
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                           ),
+                        // 4. Notification / Last Action (Overlay)
+                        // Using SizedBox to prevent jump
+                        SizedBox(
+                           height: 24,
+                           width: double.infinity,
+                           child: gameState.lastAction != null
+                              ? Container(
+                                  color: colors.primary,
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  child: Text(
+                                    gameState.lastAction!.toUpperCase(),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                               )
+                              : null,
+                        ),
 
                         // 5. Ball Rack (Expanded to fill remaining space)
                         Expanded(
@@ -555,10 +786,11 @@ class _GameScreenState extends State<GameScreen> {
                             alignment: Alignment.center,
                             children: [
                               // Decorative Gears behind the rack
-                              Opacity(
-                                opacity: 0.1,
-                                child: Image.asset('assets/images/ui/gears.png', fit: BoxFit.contain),
-                              ),
+                              if (colors.backgroundMain == SteampunkTheme.mahoganyDark)
+                                Opacity(
+                                  opacity: 0.1,
+                                  child: Image.asset('assets/images/ui/gears.png', fit: BoxFit.contain),
+                                ),
                               // The Rack
                               Center(
                                 child: Padding(
@@ -578,21 +810,35 @@ class _GameScreenState extends State<GameScreen> {
                         ),
 
                         // Controls
+                        // Controls (COMPACT)
                         Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           child: Row(
                             children: [
-                              // Foul Toggle
+                              // Foul Button - COMPACT
                               Expanded(
                                 child: SteampunkButton(
-                                  label: gameState.foulMode == FoulMode.none 
-                                      ? 'No Foul' 
-                                      : (gameState.foulMode == FoulMode.normal ? 'Foul\n-1' : 'Break Foul\n-2'),
-                                  textColor: gameState.foulMode == FoulMode.none
-                                      ? null // Default color
-                                      : (gameState.foulMode == FoulMode.normal 
-                                          ? const Color(0xFFCC6600) // Orange for -1
-                                          : const Color(0xFFCC0000)), // Red for -2
+                                  child: SizedBox(
+                                    height: 32, // Compact height
+                                    width: double.infinity,
+                                    child: Center(
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          gameState.foulMode == FoulMode.none 
+                                            ? 'NO FOUL' 
+                                            : (gameState.foulMode == FoulMode.normal ? 'FOUL -1' : 'BREAK FOUL -2'),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.3,
+                                          ),
+                                          maxLines: 1,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                   onPressed: gameState.gameOver ? () {} : () {
                                      FoulMode next;
                                      switch (gameState.foulMode) {
@@ -600,7 +846,6 @@ class _GameScreenState extends State<GameScreen> {
                                          next = FoulMode.normal; 
                                          break;
                                        case FoulMode.normal: 
-                                         // severe (Break Foul) only allowed in Break Sequence
                                          next = gameState.canBreakFoul ? FoulMode.severe : FoulMode.none; 
                                          break;
                                        case FoulMode.severe: 
@@ -612,18 +857,34 @@ class _GameScreenState extends State<GameScreen> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              // Safe Button (Toggle)
+                              // Safe Button - COMPACT (No Shield)
                               Expanded(
                                 child: SteampunkButton(
-                                  label: gameState.isSafeMode ? 'CONFIRM SAFE' : 'SAFE',
-                                  icon: gameState.isSafeMode ? Icons.shield_moon : Icons.shield,
-                                  onPressed: gameState.gameOver ? () {} : gameState.onSafe,
-                                  // Green gradient when Active (Safe Mode ON)
+                                  child: SizedBox(
+                                    height: 32, // Compact height
+                                    width: double.infinity,
+                                    child: Center(
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: const Text(
+                                          'SAFE',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.3,
+                                          ),
+                                          maxLines: 1,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  onPressed: gameState.gameOver ? () {} : () {
+                                    gameState.onSafe();
+                                  },
                                   backgroundGradientColors: gameState.isSafeMode 
-                                    ? const [Color(0xFF66BB6A), Color(0xFF2E7D32)] // Green/Dark Green
+                                    ? const [Color(0xFF66BB6A), Color(0xFF2E7D32)]
                                     : null,
-                                  // Icon/Text color changes too? Maybe white on green?
-                                  textColor: gameState.isSafeMode ? Colors.white : null,
                                 ),
                               ),
                             ],
@@ -651,15 +912,37 @@ class _GameScreenState extends State<GameScreen> {
             },
           ),
           
+        // Pause Overlay
+        const PauseOverlay(),
       ],
     ); // close Stack - this is the return of build()
   }
 
   List<Widget> _buildRackFormation(BuildContext context, GameState gameState) {
-    const ballSize = 60.0;
-    const diameter = ballSize;
+    // Calculate responsive ball size based on available screen space
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+    
+    // Account for UI elements: AppBar, Stats, Clock, Controls, Padding
+    // AppBar ~56, Stats ~36, Clock ~32, Controls ~80, Padding ~50
+    final availableHeight = screenHeight - 254;
+    final availableWidth = screenWidth - 32; // 16px padding on each side
+    
+    // Calculate maximum ball size based on constraints
+    // Rack is 5 balls wide
+    final maxWidthBallSize = availableWidth / 5.2; // 5 balls + minimal spacing
+    
+    // Rack is 5 rows tall (with vertical offset = diameter * 0.866)
+    // Total height = 4 * verticalOffset + diameter = 4 * (d * 0.866) + d = 4.464d
+    final maxHeightBallSize = availableHeight / 4.6; // 4.464 + buffer for Double Sack label
+    
+    // Use the smaller of the two to ensure it fits - increased max to 200px
+    final ballSize = (maxWidthBallSize < maxHeightBallSize ? maxWidthBallSize : maxHeightBallSize).clamp(70.0, 200.0);
+    final diameter = ballSize;
+    
     // Tighter packing: Vertical distance = diameter * sin(60 degrees)
-    const verticalOffset = diameter * 0.866025; 
+    final verticalOffset = diameter * 0.866025; 
     
     final rows = [
       [1],
@@ -675,13 +958,9 @@ class _GameScreenState extends State<GameScreen> {
 
     // Helper to check if ball can be tapped (rule enforcement)
     bool canTapBall(int ballNumber) {
-      // Rule: Cannot play foul or safe leaving only 1 ball
-      if (gameState.activeBalls.length == 1) {
-        // Only 1 ball left - check if foul or safe mode is active
-        if (gameState.foulMode != FoulMode.none || gameState.isSafeMode) {
-          return false; // Disable the last ball
-        }
-      }
+      // Logic Simplified: We allow tapping even if it's the last ball.
+      // This is necessary to register Fouls/Safes without pocketing the ball (Ball Count remains 1).
+      // The GameState.onBallTapped logic handles the "0 points" calculation correctly.
       return true;
     }
 
@@ -693,48 +972,10 @@ class _GameScreenState extends State<GameScreen> {
        // Enforce rule: cannot tap last ball during foul/safe
        if (!canTapBall(ballNumber)) return;
        
-       if (gameState.foulMode == FoulMode.severe && ballNumber != 15) {
+       if (gameState.foulMode == FoulMode.severe && ballNumber != 15 && ballNumber != 0) {
         // Trigger progressive hint
         gameState.reportBreakFoulError(ballNumber: ballNumber);
-        if (gameState.breakFoulErrorCount == 1) {
-             // 1st Error: Hide bubble, Show Dialog immediately
-             gameState.setShowBreakFoulHint(false);
-             showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Break Foul Rule'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                       // Visual Ball 15
-                       SizedBox(
-                         width: 80, 
-                         height: 80,
-                         child: BallButton(
-                           ballNumber: 15,
-                           isActive: true,
-                           onTap: () {},
-                         ),
-                       ),
-                       const SizedBox(height: 16),
-                       const Text(
-                        'Invalid Selection!\n\n'
-                        'When Break Foul is active (Severe):\n'
-                        '- NO ball was potted.\n'
-                        '- You MUST select Ball 15 (0 points).\n'
-                        '- Result is -2 points to score.',
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('OK'),
-                    ),
-                  ],
-                ),
-             );
-         }
+        // No dialog - just apply the foul directly
         return;
       }
       
@@ -742,34 +983,7 @@ class _GameScreenState extends State<GameScreen> {
         gameState.setShowBreakFoulHint(false);
       }
       
-      // Special handling for Ball 15 during Break Foul
-      if (gameState.foulMode == FoulMode.severe && ballNumber == 15) {
-        // Show info dialog BEFORE processing
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Important Break Foul Rules'),
-            content: Text(
-              '⚠️ Special Rules:\n\n'
-              '• You CAN commit Break Foul again\n'
-              '• The 3-Foul rule does NOT apply\n'
-              '• Each Break Foul is -2 points\n'
-              '• Only Ball 15 ends the turn',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  // THEN process the ball tap
-                  gameState.onBallTapped(ballNumber);
-                },
-                child: const Text('Got it!'),
-              ),
-            ],
-          ),
-        );
-        return;
-      }
+      // Ball 15 during Break Foul is processed normally, no special dialog needed
       
       if (ballNumber == 0) {
         gameState.onDoubleSack();
@@ -794,12 +1008,41 @@ class _GameScreenState extends State<GameScreen> {
                 child: SizedBox(
                   width: diameter,
                   height: diameter,
-                  child: BallButton(
-                    ballNumber: rows[r][c],
-                    isActive: !gameState.gameOver && 
-                              gameState.activeBalls.contains(rows[r][c]) &&
-                              canTapBall(rows[r][c]),
-                    onTap: () => handleTap(rows[r][c]),
+                  child: AnimatedBuilder(
+                    animation: _rackAnimationController,
+                    builder: (context, child) {
+                       // Sequential Fade In
+                       // Total 15 balls. Index count 0..14 roughly.
+                       // We need a stable index.
+                       int flatIndex = 0;
+                       for (int i=0; i<r; i++) flatIndex += rows[i].length;
+                       flatIndex += c;
+                       
+                       // Stagger: 0.0 to 1.0 range
+                       // Each ball takes 0.3 of duration.
+                       // Starts shift by index * 0.04 (15 * 0.04 = 0.6)
+                       // End = Start + 0.3. Max = 0.6 + 0.3 = 0.9. Fits in 1.0.
+                       final double start = flatIndex * 0.05;
+                       final double end = start + 0.3;
+                       
+                       final opacity = Curves.easeOut.transform(
+                         ((_rackAnimationController.value - start) / (end - start)).clamp(0.0, 1.0)
+                       );
+                       
+                       return Opacity(
+                          opacity: opacity,
+                          child: child,
+                       );
+                    },
+                    child: BallButton(
+                      ballNumber: rows[r][c],
+                      // Grey out all balls except 15 during Break Foul
+                      isActive: !gameState.gameOver && 
+                                gameState.activeBalls.contains(rows[r][c]) &&
+                                canTapBall(rows[r][c]) &&
+                                (gameState.foulMode != FoulMode.severe || rows[r][c] == 15),
+                      onTap: () => handleTap(rows[r][c]),
+                    ),
                   ),
                 ),
               ),
@@ -848,8 +1091,8 @@ class _GameScreenState extends State<GameScreen> {
     );
 
     return [
-      // Add generous padding above rack for bubbles to prevent clipping
-      const SizedBox(height: 120),
+      // Minimal padding for hint bubbles - center balls vertically
+      const SizedBox(height: 40),
       rackStack,
     ];
   }
@@ -861,7 +1104,7 @@ class _GameScreenState extends State<GameScreen> {
         Text(
           label,
           style: const TextStyle(
-            color: SteampunkTheme.brassPrimary,
+            color: Color(0xFFE0E0E0), // Much Brighter (Steam White) for contrast against black
             fontSize: 10,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.0,
@@ -881,25 +1124,180 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  void _show3FoulPopup(BuildContext context, GameState gameState) {
-    final l10n = AppLocalizations.of(context);
-    showDialog(
+  OverlayEntry? _messageOverlayEntry;
+  OverlayEntry? _pointsOverlayEntry;
+  OverlayEntry? _shieldOverlayEntry;
+
+  void _showSafeShield() {
+    // Remove existing shield if any
+    _shieldOverlayEntry?.remove();
+    
+    // Create shield overlay
+    _shieldOverlayEntry = OverlayEntry(
+      builder: (context) => SafeShieldOverlay(
+        onFinish: () {
+          _shieldOverlayEntry?.remove();
+          _shieldOverlayEntry = null;
+        },
+      ),
+    );
+    
+    // Insert
+    Overlay.of(context, rootOverlay: true).insert(_shieldOverlayEntry!);
+  }
+
+  OverlayEntry? _reRackOverlayEntry;
+  
+  void _showReRackSplash(String type, VoidCallback onComplete) {
+    _reRackOverlayEntry = OverlayEntry(
+      builder: (context) => ReRackOverlay(
+        type: type,
+        onFinish: () {
+          _reRackOverlayEntry?.remove();
+          _reRackOverlayEntry = null;
+          onComplete();
+        },
+      ),
+    );
+    
+    // Insert
+    Overlay.of(context, rootOverlay: true).insert(_reRackOverlayEntry!);
+  }
+
+  void _showFlyingPenalty(int points, String message, Player player, VoidCallback onComplete, {int? positivePoints, int? penalty}) {
+     // 1. Identify Target Plaque Key based on player instance
+     final isP1 = player == Provider.of<GameState>(context, listen: false).players[0];
+     final targetKey = isP1 ? _p1PlaqueKey : _p2PlaqueKey;
+
+     // 2. Get Target Position (Score height, plaque center X)
+     final plaqueState = targetKey.currentState as PlayerPlaqueState?;
+     final plaqueContext = targetKey.currentContext;
+     
+     if (plaqueContext == null || plaqueState == null || plaqueState.scoreKey.currentContext == null) {
+        onComplete();
+        return;
+     }
+
+     final plaqueRenderBox = plaqueContext.findRenderObject() as RenderBox?;
+     final scoreRenderBox = plaqueState.scoreKey.currentContext!.findRenderObject() as RenderBox?;
+     
+     if (plaqueRenderBox == null || scoreRenderBox == null) {
+        onComplete();
+        return;
+     }
+     
+     // Use plaque center X, score center Y
+     final plaqueCenter = plaqueRenderBox.localToGlobal(plaqueRenderBox.size.center(Offset.zero));
+     final scoreCenter = scoreRenderBox.localToGlobal(scoreRenderBox.size.center(Offset.zero));
+     final position = Offset(plaqueCenter.dx, scoreCenter.dy);
+
+     // 3. Remove existing overlays if any (spam protection)
+     _messageOverlayEntry?.remove();
+     _pointsOverlayEntry?.remove();
+     
+     // 4. Create Message Overlay (center fade)
+     _messageOverlayEntry = OverlayEntry(
+       builder: (context) => FoulMessageOverlay(
+         message: message,
+         onFinish: () {
+            _messageOverlayEntry?.remove();
+            _messageOverlayEntry = null;
+         },
+       ),
+     );
+     
+     // 5. Create Points Overlay (above score, fades then updates)
+      _pointsOverlayEntry = OverlayEntry(
+        builder: (context) => FoulPointsOverlay(
+          points: points,
+          positivePoints: positivePoints,
+          penalty: penalty,
+          targetPosition: position,
+          onImpact: () {
+             // Trigger Shake on Plaque and update score
+             targetKey.currentState?.triggerPenaltyImpact();
+          },
+          onFinish: () {
+             _pointsOverlayEntry?.remove();
+             _pointsOverlayEntry = null;
+             onComplete();
+          },
+       ),
+     );
+     
+     // 6. Insert both overlays
+     Overlay.of(context, rootOverlay: true).insert(_messageOverlayEntry!);
+     Overlay.of(context, rootOverlay: true).insert(_pointsOverlayEntry!);
+  }
+
+  void _show2FoulWarning(BuildContext context, GameState gameState) {
+    showZoomDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: Text(l10n.translate('threeFoulPenalty')),
-        content: Text(l10n.translate('threeFoulMessage')),
+        backgroundColor: Colors.amber.shade900,
+        title: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+             Icon(Icons.warning_amber_rounded, color: Colors.white, size: 32),
+             SizedBox(width: 12),
+             Text('2 FOULS!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+             SizedBox(width: 12),
+             Icon(Icons.warning_amber_rounded, color: Colors.white, size: 32),
+          ],
+        ),
+        content: RichText(
+          textAlign: TextAlign.center,
+          text: const TextSpan(
+            style: TextStyle(color: Colors.white, fontSize: 18),
+            children: [
+              TextSpan(text: 'You are on 2 consecutive fouls.\nOne more foul will result in a '),
+              TextSpan(
+                text: '-15 points',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              ),
+              TextSpan(text: ' penalty!'),
+            ],
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () {
-              gameState.dismissThreeFoulPopup();
+              gameState.dismissTwoFoulWarning();
               Navigator.of(context).pop();
             },
-            child: Text(l10n.ok),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.black45,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('I UNDERSTAND'),
           ),
         ],
       ),
     );
+  }
+
+  void _show3FoulPopup(BuildContext context, GameState gameState) {
+     // Logic split: Animation handled by Event Queue.
+     // This method now only handles the Dialog/Reset logic if needed.
+     
+     gameState.dismissThreeFoulPopup(); // Done
+     
+     // Maybe show a dialog explaining the reset?
+     // "3 FOULS! -15 Points. Rack Reset."
+     showZoomDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('3 FOULS!'),
+          content: const Text('Three consecutive fouls.\nPenalty: -15 Points.\nRack is reset.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            )
+          ],
+        )
+     );
   }
 
   void _showResetDialog(BuildContext context) {

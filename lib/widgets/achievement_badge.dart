@@ -80,7 +80,6 @@ class AchievementBadge extends StatelessWidget {
     // Direct Mappings
     if (id == 'first_game') return '${basePath}first_game.png';
     if (id == 'first_win') return '${basePath}first_win.png';
-    if (id == 'vinzend') return '${basePath}vinzend.png';
     if (id == 'lucky_7') return '${basePath}lucky_7.png';
     
     // Category Mappings

@@ -1,4 +1,4 @@
-# Fortune 14/2 - Projektnotizen
+# 14.1 Fortune - Projektnotizen
 
 ## Spielregeln (Vereinfacht)
 

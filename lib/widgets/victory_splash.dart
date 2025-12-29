@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import '../models/player.dart';
 import '../theme/steampunk_theme.dart';
+import '../theme/fortune_theme.dart';
 import 'steampunk_widgets.dart';
+import 'score_card.dart';
 
 class VictorySplash extends StatefulWidget {
   final Player winner;
   final Player loser;
   final int raceToScore;
   final List<String> matchLog;
+  final Duration elapsedDuration;
   final VoidCallback onNewGame;
   final VoidCallback onExit;
 
@@ -18,6 +21,7 @@ class VictorySplash extends StatefulWidget {
     required this.loser,
     required this.raceToScore,
     required this.matchLog,
+    required this.elapsedDuration,
     required this.onNewGame,
     required this.onExit,
   });
@@ -44,8 +48,11 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    final colors = FortuneColors.of(context);
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: SteampunkTheme.mahoganyDark,
+      backgroundColor: colors.backgroundMain,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -53,7 +60,7 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
         actions: [
           IconButton(
             icon: const Icon(Icons.undo),
-            color: SteampunkTheme.brassPrimary,
+            color: colors.primary,
             tooltip: 'Undo',
             onPressed: () {
               // Undo last action before victory
@@ -63,7 +70,7 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
           ),
           IconButton(
             icon: const Icon(Icons.redo),
-            color: SteampunkTheme.brassDark,
+            color: colors.primaryDark,
             tooltip: 'Redo (disabled)',
             onPressed: null, // Greyed out
           ),
@@ -82,11 +89,11 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
             child: ConfettiWidget(
               confettiController: _confettiController,
               blastDirectionality: BlastDirectionality.explosive,
-              colors: const [
-                SteampunkTheme.brassPrimary,
-                SteampunkTheme.brassBright,
-                SteampunkTheme.verdigris,
-                SteampunkTheme.amberGlow,
+              colors: [
+                colors.primary,
+                colors.primaryBright,
+                colors.secondary,
+                colors.accent,
               ],
               numberOfParticles: 50,
               gravity: 0.3,
@@ -100,10 +107,10 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
               child: Column(
                 children: [
                   // Trophy Icon and Victory Text - Compact
-                  const Icon(
+                  Icon(
                     Icons.emoji_events,
                     size: 48,
-                    color: SteampunkTheme.amberGlow,
+                    color: colors.accent,
                   ),
                   
                   const SizedBox(height: 8),
@@ -111,13 +118,13 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
                   Text(
                     'VICTORY!',
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      color: SteampunkTheme.brassBright,
+                      color: colors.primaryBright,
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                       shadows: [
-                        const Shadow(
+                        Shadow(
                           blurRadius: 10,
-                          color: SteampunkTheme.amberGlow,
+                          color: colors.accent,
                         ),
                       ],
                     ),
@@ -138,8 +145,8 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
                                 children: [
                                   Text(
                                     widget.winner.score.toString(),
-                                    style: const TextStyle(
-                                      color: SteampunkTheme.amberGlow,
+                                    style: TextStyle(
+                                      color: colors.accent,
                                       fontSize: 48,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -147,8 +154,8 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
                                   const SizedBox(height: 8),
                                   Text(
                                     widget.winner.name.toUpperCase(),
-                                    style: const TextStyle(
-                                      color: SteampunkTheme.brassBright,
+                                    style: TextStyle(
+                                      color: colors.primaryBright,
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -161,8 +168,8 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
                                 children: [
                                   Text(
                                     widget.loser.score.toString(),
-                                    style: const TextStyle(
-                                      color: SteampunkTheme.steamWhite,
+                                    style: TextStyle(
+                                      color: colors.textMain,
                                       fontSize: 40,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -170,8 +177,8 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
                                   const SizedBox(height: 8),
                                   Text(
                                     widget.loser.name.toUpperCase(),
-                                    style: const TextStyle(
-                                      color: SteampunkTheme.steamWhite,
+                                    style: TextStyle(
+                                      color: colors.textMain,
                                       fontSize: 16,
                                     ),
                                   ),
@@ -182,11 +189,38 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
                         ),
                         
                         const SizedBox(height: 32),
+
+                        // Match Time
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: colors.backgroundCard,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: colors.primary.withOpacity(0.5)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.timer, size: 20, color: colors.primary),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Match Time: ${_formatDuration(widget.elapsedDuration)}',
+                                style: TextStyle(
+                                  color: colors.primaryBright,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         
                         // Stats table
                         Container(
                           decoration: BoxDecoration(
-                            border: Border.all(color: SteampunkTheme.brassDark),
+                            border: Border.all(color: colors.primaryDark),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Column(
@@ -194,8 +228,8 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
                               // Header row
                               Container(
                                 padding: const EdgeInsets.symmetric(vertical: 8),
-                                decoration: const BoxDecoration(
-                                  color: SteampunkTheme.mahoganyLight,
+                                decoration: BoxDecoration(
+                                  color: colors.backgroundCard,
                                   borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
                                 ),
                                 child: Row(
@@ -203,8 +237,8 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
                                     Expanded(
                                       child: Text(
                                         widget.winner.name.toUpperCase(),
-                                        style: const TextStyle(
-                                          color: SteampunkTheme.brassBright,
+                                        style: TextStyle(
+                                          color: colors.primaryBright,
                                           fontSize: 14,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -215,8 +249,8 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
                                     Expanded(
                                       child: Text(
                                         widget.loser.name.toUpperCase(),
-                                        style: const TextStyle(
-                                          color: SteampunkTheme.steamWhite,
+                                        style: TextStyle(
+                                          color: colors.textMain,
                                           fontSize: 14,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -241,13 +275,18 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
                         Text(
                           'SCORE CARD',
                           style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: SteampunkTheme.brassPrimary,
+                            color: colors.primary,
                             letterSpacing: 2,
                             fontSize: 16,
                           ),
                         ),
                         const SizedBox(height: 16),
-                        _buildScoreCard(),
+                        ScoreCard(
+                          player1: widget.winner,
+                          player2: widget.loser,
+                          matchLog: widget.matchLog,
+                          winnerName: widget.winner.name,
+                        ),
                       ],
                     ),
                   ),
@@ -281,7 +320,16 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
     );
   }
 
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    final hours = duration.inHours > 0 ? '${duration.inHours}:' : '';
+    return "$hours$minutes:$seconds";
+  }
+
   Widget _buildScoreLine(String name, int score, {required bool isWinner}) {
+    final colors = FortuneColors.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -289,7 +337,7 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
           child: Text(
             name,
             style: TextStyle(
-              color: isWinner ? SteampunkTheme.brassBright : SteampunkTheme.steamWhite,
+              color: isWinner ? colors.primaryBright : colors.textMain,
               fontSize: isWinner ? 24 : 18,
               fontWeight: isWinner ? FontWeight.bold : FontWeight.normal,
             ),
@@ -298,7 +346,7 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
         Text(
           score.toString(),
           style: TextStyle(
-            color: isWinner ? SteampunkTheme.amberGlow : SteampunkTheme.steamWhite,
+            color: isWinner ? colors.accent : colors.textMain,
             fontSize: isWinner ? 32 : 24,
             fontWeight: FontWeight.bold,
           ),
@@ -308,6 +356,7 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
   }
 
   Widget _buildStatLine(String label, String winnerStat, String loserStat) {
+    final colors = FortuneColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -316,21 +365,21 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
           Expanded(
             child: Text(
               winnerStat,
-              style: const TextStyle(color: SteampunkTheme.steamWhite),
+              style: TextStyle(color: colors.textMain),
               textAlign: TextAlign.left,
             ),
           ),
           Text(
             label,
-            style: const TextStyle(
-              color: SteampunkTheme.brassDark,
+            style: TextStyle(
+              color: colors.primaryDark,
               fontSize: 12,
             ),
           ),
           Expanded(
             child: Text(
               loserStat,
-              style: const TextStyle(color: SteampunkTheme.steamWhite),
+              style: TextStyle(color: colors.textMain),
               textAlign: TextAlign.right,
             ),
           ),
@@ -340,18 +389,19 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
   }
 
   Widget _buildStatsRow(String label, String winnerStat, String loserStat) {
+    final colors = FortuneColors.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: SteampunkTheme.brassDark, width: 0.5)),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: colors.primaryDark, width: 0.5)),
       ),
       child: Row(
         children: [
           Expanded(
             child: Text(
               winnerStat,
-              style: const TextStyle(
-                color: SteampunkTheme.brassBright,
+              style: TextStyle(
+                color: colors.primaryBright,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -362,8 +412,8 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
             width: 80,
             child: Text(
               label,
-              style: const TextStyle(
-                color: SteampunkTheme.steamWhite,
+              style: TextStyle(
+                color: colors.textMain,
                 fontSize: 12,
               ),
               textAlign: TextAlign.center,
@@ -372,8 +422,8 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
           Expanded(
             child: Text(
               loserStat,
-              style: const TextStyle(
-                color: SteampunkTheme.steamWhite,
+              style: TextStyle(
+                color: colors.textMain,
                 fontSize: 16,
               ),
               textAlign: TextAlign.center,
@@ -448,343 +498,5 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
     }
     
     return highestRun.toString();
-  }
-
-  Widget _buildScoreCard() {
-    // Create a simple innings breakdown
-    int maxInnings = widget.winner.currentInning > widget.loser.currentInning 
-        ? widget.winner.currentInning 
-        : widget.loser.currentInning;
-    
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: SteampunkTheme.brassDark),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: const BoxDecoration(
-              color: SteampunkTheme.mahoganyLight,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: const Text(
-                    'Inning',
-                    style: TextStyle(
-                      color: SteampunkTheme.brassPrimary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    widget.winner.name,
-                    style: const TextStyle(
-                      color: SteampunkTheme.brassBright,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    widget.loser.name,
-                    style: const TextStyle(
-                      color: SteampunkTheme.steamWhite,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Innings rows (show first 9)
-          ...List.generate(
-            maxInnings > 9 ? 9 : maxInnings,
-            (index) => _buildInningRow(index + 1),
-          ),
-          // Result row
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: SteampunkTheme.brassDark, width: 2)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: const Text(
-                    'Result',
-                    style: TextStyle(
-                      color: SteampunkTheme.brassPrimary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    widget.winner.score.toString(),
-                    style: const TextStyle(
-                      color: SteampunkTheme.brassBright,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    widget.loser.score.toString(),
-                    style: const TextStyle(
-                      color: SteampunkTheme.steamWhite,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInningRow(int inning) {
-    // Parse match log to find score notation for this inning
-    Map<String, Map<int, String>> inningScores = _parseInningScores();
-    
-    // Check if this is a legacy format game
-    bool isLegacy = inningScores[widget.winner.name]!.isEmpty && 
-                     inningScores[widget.loser.name]!.isEmpty;
-    
-    String winnerScore = '';
-    String loserScore = '';
-    
-    if (!isLegacy) {
-      // New format - access by inning number
-      winnerScore = inningScores[widget.winner.name]?[inning] ?? '';
-      loserScore = inningScores[widget.loser.name]?[inning] ?? '';
-    } else {
-      // Legacy format - show placeholder only in first inning
-      if (inning == 1) {
-        winnerScore = '-';
-        loserScore = '-';
-      }
-    }
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: SteampunkTheme.brassDark, width: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              inning.toString(),
-              style: const TextStyle(
-                color: SteampunkTheme.steamWhite,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              winnerScore,
-              style: const TextStyle(
-                color: SteampunkTheme.steamWhite,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              loserScore,
-              style: const TextStyle(
-                color: SteampunkTheme.steamWhite,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Map<String, Map<int, String>> _parseInningScores() {
-    // Returns: { 
-    //   "Player1": { 1: "14.3", 2: "5F", 3: "1", ... },
-    //   "Player2": { 1: "2", 2: "8", ... }
-    // }
-    
-    // Check for legacy format (no inning prefixes)
-    if (widget.matchLog.isNotEmpty && !_hasInningPrefix(widget.matchLog.last)) {
-      return {
-        widget.winner.name: {},
-        widget.loser.name: {},
-      };
-    }
-    
-    Map<String, Map<int, String>> result = {
-      widget.winner.name: {},
-      widget.loser.name: {},
-    };
-    
-    // Track points accumulated in current inning (not as string, as number!)
-    Map<String, int> currentInningPoints = {
-      widget.winner.name: 0,
-      widget.loser.name: 0,
-    };
-    
-    Map<String, int> reRackPoints = {
-      widget.winner.name: 0,
-      widget.loser.name: 0,
-    };
-    
-    Map<String, bool> inReRackMode = {
-      widget.winner.name: false,
-      widget.loser.name: false,
-    };
-    
-    Map<String, bool> hasFoul = {
-      widget.winner.name: false,
-      widget.loser.name: false,
-    };
-    
-    Map<String, int> lastInning = {
-      widget.winner.name: 0,
-      widget.loser.name: 0,
-    };
-    
-    // Iterate chronologically
-    for (int i = widget.matchLog.length - 1; i >= 0; i--) {
-      String logEntry = widget.matchLog[i];
-      
-      // Extract inning and action
-      RegExp inningRegex = RegExp(r'I(\d+) \| (.+)');
-      Match? inningMatch = inningRegex.firstMatch(logEntry);
-      if (inningMatch == null) continue;
-      
-      int inning = int.parse(inningMatch.group(1)!);
-      String action = inningMatch.group(2)!;
-      
-      String? playerName;
-      if (action.contains('${widget.winner.name}:')) {
-        playerName = widget.winner.name;
-      } else if (action.contains('${widget.loser.name}:')) {
-        playerName = widget.loser.name;
-      }
-      if (playerName == null) continue;
-      
-      // Check if inning changed - finalize previous inning
-      if (lastInning[playerName]! > 0 && lastInning[playerName]! != inning) {
-        String notation = _buildInningNotation(
-          currentInningPoints[playerName]!,
-          reRackPoints[playerName]!,
-          inReRackMode[playerName]!,
-          hasFoul[playerName]!,
-        );
-        
-        if (notation.isNotEmpty) {
-          result[playerName]![lastInning[playerName]!] = notation;
-        }
-        
-        // Reset for new inning
-        currentInningPoints[playerName] = 0;
-        reRackPoints[playerName] = 0;
-        inReRackMode[playerName] = false;
-        hasFoul[playerName] = false;
-      }
-      
-      lastInning[playerName] = inning;
-      
-      // Parse action
-      if (action.contains('Re-rack')) {
-        inReRackMode[playerName] = true;
-        reRackPoints[playerName] = currentInningPoints[playerName]!;
-        currentInningPoints[playerName] = 0; // Reset for post-re-rack scoring
-      } else if (action.contains('Foul')) {
-        hasFoul[playerName] = true;
-      } else if (action.contains('+')) {
-        RegExp pointsRegex = RegExp(r'\+(\d+)');
-        Match? match = pointsRegex.firstMatch(action);
-        if (match != null) {
-          int points = int.parse(match.group(1)!);
-          currentInningPoints[playerName] = currentInningPoints[playerName]! + points;
-        }
-      }
-    }
-    
-    // Finalize remaining innings
-    for (var player in [widget.winner.name, widget.loser.name]) {
-      if (lastInning[player]! > 0) {
-        String notation = _buildInningNotation(
-          currentInningPoints[player]!,
-          reRackPoints[player]!,
-          inReRackMode[player]!,
-          hasFoul[player]!,
-        );
-        
-        if (notation.isNotEmpty) {
-          result[player]![lastInning[player]!] = notation;
-        }
-      }
-    }
-    
-    return result;
-  }
-  
-  String _buildInningNotation(int points, int reRackPoints, bool hasReRack, bool hasFoul) {
-    // Build notation: "14.3" or "5F" or "8" etc.
-    String notation = '';
-    
-    if (hasReRack) {
-      // Re-rack format: "{reRackPoints}.{additionalPoints}"
-      notation = '$reRackPoints.';
-      if (points > 0) {
-        notation += points.toString();
-      }
-    } else {
-      // Normal format: just the points
-      if (points > 0) {
-        notation = points.toString();
-      }
-    }
-    
-    if (hasFoul) {
-      notation += 'F';
-    }
-    
-    
-    return notation;
-  }
-  
-  bool _hasInningPrefix(String logEntry) {
-    return logEntry.startsWith(RegExp(r'I\d+ \| '));
   }
 }
