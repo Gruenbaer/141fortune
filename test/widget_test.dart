@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fortune141/models/game_state.dart';
+import 'package:fortune141/models/game_settings.dart';
+import 'package:fortune141/models/achievement_manager.dart';
 
 void main() {
   testWidgets('App compiles without errors', (WidgetTester tester) async {
@@ -8,12 +10,17 @@ void main() {
   });
 
   test('GameState can be created', () {
-    final gameState = GameState(
+    final settings = GameSettings(
       raceToScore: 100,
-      playerNames: ['Player 1', 'Player 2'],
+      player1Name: 'Player 1',
+      player2Name: 'Player 2',
       threeFoulRuleEnabled: true,
     );
-    expect(gameState.raceToScore, 100);
+    final gameState = GameState(
+      settings: settings,
+      achievementManager: AchievementManager(),
+    );
+    expect(gameState.settings.raceToScore, 100);
     expect(gameState.players.length, 2);
   });
 }

@@ -104,7 +104,7 @@ class _GameHistoryScreenState extends State<GameHistoryScreen> {
             ),
         ],
       ),
-      body: SteampunkBackground(
+      body: ThemedBackground(
         child: SafeArea(
           child: Column(
             children: [

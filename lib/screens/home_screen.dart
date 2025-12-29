@@ -109,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body:Stack(
         children: [
           // Main content
-          SteampunkBackground(
+          ThemedBackground(
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
@@ -133,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           if (_activeGame != null) ...[
-                            SteampunkButton(
+                            ThemedButton(
                               label: '${l10n.resume}: ${_activeGame!.player1Name} vs ${_activeGame!.player2Name}',
                               icon: Icons.play_circle_fill,
                               onPressed: () => _resumeGame(_activeGame!),
@@ -141,13 +141,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(height: 16),
                           ],
 
-                          SteampunkButton(
+                          ThemedButton(
                             label: l10n.new141Game,
                             icon: Icons.play_arrow,
                             onPressed: () => showNewGameSettings(context),
                           ),
                           
-                          SteampunkButton(
+                          ThemedButton(
                             label: l10n.translate('gameHistory'),
                             icon: Icons.history,
                             onPressed: () {
@@ -158,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                           ),
                           
-                          SteampunkButton(
+                          ThemedButton(
                             label: l10n.players,
                             icon: Icons.people_outline,
                             onPressed: () {
@@ -169,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                           ),
                           
-                          SteampunkButton(
+                          ThemedButton(
                             label: l10n.statistics,
                             icon: Icons.bar_chart,
                             onPressed: () {
@@ -181,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           
                           // ACHIEVEMENTS BUTTON
-                          SteampunkButton(
+                          ThemedButton(
                             label: l10n.translate('achievements'),
                             icon: Icons.emoji_events,
                             onPressed: () {
@@ -192,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                           ),
                           
-                          SteampunkButton(
+                          ThemedButton(
                             label: l10n.settings,
                             icon: Icons.settings_suggest, 
                             onPressed: () async {

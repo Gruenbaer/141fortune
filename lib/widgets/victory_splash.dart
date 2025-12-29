@@ -79,7 +79,7 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
       body: Stack(
         children: [
           // Background
-          SteampunkBackground(
+          ThemedBackground(
             child: Container(),
           ),
           
@@ -297,14 +297,14 @@ class _VictorySplashState extends State<VictorySplash> with SingleTickerProvider
                   Row(
                     children: [
                       Expanded(
-                        child: SteampunkButton(
+                        child: ThemedButton(
                           label: 'New',
                           onPressed: widget.onNewGame,
                         ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: SteampunkButton(
+                        child: ThemedButton(
                           label: 'Exit',
                           onPressed: widget.onExit,
                         ),

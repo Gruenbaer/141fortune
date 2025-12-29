@@ -233,6 +233,12 @@ class GameState extends ChangeNotifier {
     showBreakFoulHint = show;
     notifyListeners();
   }
+  
+  // Toggle safe mode without switching players (per user request)
+  void toggleSafeMode() {
+    isSafeMode = !isSafeMode;
+    notifyListeners();
+  }
 
   void reportBreakFoulError({int? ballNumber}) {
     breakFoulErrorCount++;
@@ -520,7 +526,7 @@ class GameState extends ChangeNotifier {
     bool isReRack = false;
     
     if (newBallCount == 1) {
-      _updateRackCount(15); // Reset to full rack (14 + 1)
+      // _updateRackCount(15); // REMOVED: Delayed until after splash
       
       _logAction('${currentPlayer.name}: Re-rack');
       // Queue re-rack animation event
@@ -588,6 +594,11 @@ class GameState extends ChangeNotifier {
     if (count > 15) count = 15;
     activeBalls = Set.from(List.generate(count, (i) => i + 1));
   }
+  
+  // Called by UI after Splash animation to physically reset the rack
+  void finalizeReRack() {
+     _resetRack();
+  }
 
   void onDoubleSack() {
     _pushState();
@@ -645,7 +656,9 @@ class GameState extends ChangeNotifier {
     // Queue rerack animation
     eventQueue.add(ReRackEvent("Re-rack!"));
     
-    _resetRack();
+    // _resetRack(); // REMOVED: Delayed.
+    // Clear activeBalls to grey out all numbered balls (1-15); white ball (0) stays visible
+    activeBalls.clear();
 
     // Check win BEFORE potentially switching player
     _checkWinCondition();

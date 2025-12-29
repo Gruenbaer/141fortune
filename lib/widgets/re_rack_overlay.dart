@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../theme/fortune_theme.dart';
 
 class ReRackOverlay extends StatefulWidget {
   final String type; // e.g. "14.1 Re-Rack"
@@ -24,7 +24,7 @@ class _ReRackOverlayState extends State<ReRackOverlay> with SingleTickerProvider
   void initState() {
     super.initState();
     _controller = AnimationController(
-       duration: const Duration(milliseconds: 2750), // 2.75 seconds total (User Req: +0.75s)
+      duration: const Duration(milliseconds: 1500), // Simpler, faster animation
        vsync: this,
     );
 
@@ -64,30 +64,35 @@ class _ReRackOverlayState extends State<ReRackOverlay> with SingleTickerProvider
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 decoration: BoxDecoration(
-                  color: Colors.black54,
+                  color: Colors.black.withOpacity(0.3), // Transparent per user request
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.amber.shade700, width: 2),
+                  // border: Border.all(color: Colors.amber.shade700, width: 2), // Removed per user request
                   boxShadow: [
                      const BoxShadow(color: Colors.black87, blurRadius: 20, spreadRadius: 5),
                   ],
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Icon removed per user request
-                    const SizedBox(height: 12),
-                    Text(
-                      widget.type,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.rye(
-                        fontSize: 32,
-                        color: Colors.amber.shade100,
-                        shadows: [
-                          const Shadow(blurRadius: 10, color: Colors.orange, offset: Offset(0, 0)),
-                        ],
-                      ),
-                    ),
-                  ],
+                child: Builder(
+                  builder: (context) {
+                    final colors = FortuneColors.of(context);
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Icon removed per user request
+                        const SizedBox(height: 12),
+                        Text(
+                          widget.type,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                            fontSize: 32,
+                            color: colors.primaryBright,
+                            shadows: [
+                              Shadow(blurRadius: 10, color: colors.accent, offset: const Offset(0, 0)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),

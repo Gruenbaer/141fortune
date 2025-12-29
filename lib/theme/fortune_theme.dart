@@ -16,6 +16,7 @@ class FortuneColors extends ThemeExtension<FortuneColors> {
   final Color accent;
   final Color textMain;
   final Color textContrast;
+  final String? backgroundImagePath; // Optional background image asset path
 
   const FortuneColors({
     required this.themeId,
@@ -28,6 +29,7 @@ class FortuneColors extends ThemeExtension<FortuneColors> {
     required this.accent,
     required this.textMain,
     required this.textContrast,
+    this.backgroundImagePath,
   });
 
   // Helper to access colors easily
@@ -47,6 +49,7 @@ class FortuneColors extends ThemeExtension<FortuneColors> {
     Color? accent,
     Color? textMain,
     Color? textContrast,
+    String? backgroundImagePath,
   }) {
     return FortuneColors(
       themeId: themeId ?? this.themeId,
@@ -59,6 +62,7 @@ class FortuneColors extends ThemeExtension<FortuneColors> {
       accent: accent ?? this.accent,
       textMain: textMain ?? this.textMain,
       textContrast: textContrast ?? this.textContrast,
+      backgroundImagePath: backgroundImagePath ?? this.backgroundImagePath,
     );
   }
 
@@ -77,6 +81,7 @@ class FortuneColors extends ThemeExtension<FortuneColors> {
       accent: Color.lerp(accent, other.accent, t)!,
       textMain: Color.lerp(textMain, other.textMain, t)!,
       textContrast: Color.lerp(textContrast, other.textContrast, t)!,
+      backgroundImagePath: t < 0.5 ? backgroundImagePath : other.backgroundImagePath,
     );
   }
 }
@@ -105,6 +110,7 @@ class CyberpunkTheme {
       accent: neonGreen,
       textMain: textWhite,
       textContrast: textBlack,
+      backgroundImagePath: null, // Cyberpunk uses code-drawn background or solid color
     );
 
     return ThemeData(

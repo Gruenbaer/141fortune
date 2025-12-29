@@ -116,7 +116,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           actionsAlignment: MainAxisAlignment.spaceEvenly,
           actions: [
             // Option 1 (Player 1)
-            SteampunkButton(
+            ThemedButton(
                onPressed: () {
                   Navigator.of(context).pop();
                   event.onOptionSelected(0);
@@ -127,7 +127,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(width: 8),
             // Option 2 (Player 2)
-            SteampunkButton(
+            ThemedButton(
                onPressed: () {
                   Navigator.of(context).pop();
                   event.onOptionSelected(1);
@@ -141,10 +141,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
        );
     } else if (event is ReRackEvent) {
       // Show Re-Rack Overlay
+      // Reset animation immediately to hide balls (show empty rack)
+      if (mounted) _rackAnimationController.value = 0.0;
+      
       _showReRackSplash(event.type, () {
          // After overlay finishes, trigger Sequential Ball Fade-in
          if (mounted) {
-           _rackAnimationController.forward(from: 0.0);
+           // NOW we physically reset the rack in logic
+           Provider.of<GameState>(context, listen: false).finalizeReRack();
+           
+           // Ensure animation starts from invisible
+           _rackAnimationController.value = 0.0;
+           _rackAnimationController.forward();
          }
         _isProcessingEvent = false;
         _processNextEvent();
@@ -319,7 +327,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
     _rackAnimationController = AnimationController(
        vsync: this,
-       duration: const Duration(milliseconds: 1500),
+       duration: const Duration(milliseconds: 1300), // Faster (was 1500)
     );
      // Start visible by default
     _rackAnimationController.value = 1.0;
@@ -561,7 +569,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 ],
               ),
             ),
-            body: SteampunkBackground(
+            body: ThemedBackground(
               child: SafeArea(
                 child: Consumer<GameState>(
                   builder: (context, gameState, child) {
@@ -816,29 +824,48 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           child: Row(
                             children: [
                               // Foul Button - COMPACT
-                              Expanded(
-                                child: SteampunkButton(
+                                Expanded(
+                                child: ThemedButton(
                                   child: SizedBox(
-                                    height: 32, // Compact height
+                                    height: 24, // Smaller height per user request
                                     width: double.infinity,
                                     child: Center(
                                       child: FittedBox(
                                         fit: BoxFit.scaleDown,
-                                        child: Text(
-                                          gameState.foulMode == FoulMode.none 
-                                            ? 'NO FOUL' 
-                                            : (gameState.foulMode == FoulMode.normal ? 'FOUL -1' : 'BREAK FOUL -2'),
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: 0.3,
+                                        child: RichText(
+                                          text: TextSpan(
+                                            style: TextStyle(
+                                              color: gameState.foulMode == FoulMode.none ? Colors.white : Colors.red,
+                                              fontSize: 14, // Larger font
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 0.3,
+                                            ),
+                                            children: gameState.foulMode == FoulMode.none
+                                                ? [const TextSpan(text: 'NO FOUL')]
+                                                : gameState.foulMode == FoulMode.normal
+                                                    ? [
+                                                        const TextSpan(text: 'FOUL '),
+                                                        const TextSpan(
+                                                          text: '-1',
+                                                          style: TextStyle(fontWeight: FontWeight.w900),
+                                                        ),
+                                                      ]
+                                                    : [
+                                                        const TextSpan(text: 'BREAK FOUL '),
+                                                        const TextSpan(
+                                                          text: '-2',
+                                                          style: TextStyle(fontWeight: FontWeight.w900),
+                                                        ),
+                                                      ],
                                           ),
                                           maxLines: 1,
                                         ),
                                       ),
                                     ),
                                   ),
+                                  backgroundGradientColors: gameState.foulMode != FoulMode.none
+                                      ? [Colors.red.shade900.withOpacity(0.3), Colors.red.shade700.withOpacity(0.3)]
+                                      : null,
                                   onPressed: gameState.gameOver ? () {} : () {
                                      FoulMode next;
                                      switch (gameState.foulMode) {
@@ -859,9 +886,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                               const SizedBox(width: 12),
                               // Safe Button - COMPACT (No Shield)
                               Expanded(
-                                child: SteampunkButton(
+                                child: ThemedButton(
                                   child: SizedBox(
-                                    height: 32, // Compact height
+                                    height: 24, // Smaller height per user request
                                     width: double.infinity,
                                     child: Center(
                                       child: FittedBox(
@@ -870,7 +897,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                           'SAFE',
                                           style: TextStyle(
                                             color: Colors.white,
-                                            fontSize: 11,
+                                            fontSize: 14, // Larger font, same as foul button
                                             fontWeight: FontWeight.w700,
                                             letterSpacing: 0.3,
                                           ),
@@ -880,7 +907,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                     ),
                                   ),
                                   onPressed: gameState.gameOver ? () {} : () {
-                                    gameState.onSafe();
+                                    // Just toggle the safe mode, don't switch players
+                                    gameState.toggleSafeMode();
                                   },
                                   backgroundGradientColors: gameState.isSafeMode 
                                     ? const [Color(0xFF66BB6A), Color(0xFF2E7D32)]
@@ -1048,8 +1076,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               ),
 
           // Cue Ball (Double Sack)
+          // Moved closer to Ball 1 (left: 0) to avoid cutoff.
+          // Ball 1 is at 2*diameter. This puts it at 0, aligning with rack left edge.
           Positioned(
-            left: ((rackWidth - diameter) / 2) - (diameter * 2.5),
+            left: 0,
             top: 0, 
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1059,7 +1089,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   height: diameter,
                   child: BallButton(
                     ballNumber: 0,
-                    isActive: !gameState.gameOver, 
+                    // Disabled during Break Foul (per user request)
+                    isActive: !gameState.gameOver && gameState.foulMode != FoulMode.severe, 
                     onTap: () => handleTap(0),
                   ),
                 ),

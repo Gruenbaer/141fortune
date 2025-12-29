@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import '../theme/steampunk_theme.dart'; // Keep for legacy constants if needed, or remove?
 import '../theme/fortune_theme.dart';
 
-class SteampunkBackground extends StatelessWidget {
+class ThemedBackground extends StatelessWidget {
   final Widget child;
 
-  const SteampunkBackground({super.key, required this.child});
+  const ThemedBackground({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -13,25 +13,21 @@ class SteampunkBackground extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: colors.backgroundMain, 
-        image: DecorationImage(
-          // Use background image only if we are in Steampunk mode (heuristic: primary is brass)
-          // Or just always use it? Let's hide it for Cyberpunk (Black/Blue background).
-          // We can check brightness or specific color.
-          image: const AssetImage('assets/images/ui/background.png'),
+        image: colors.backgroundImagePath != null ? DecorationImage(
+          image: AssetImage(colors.backgroundImagePath!),
           fit: BoxFit.cover,
-          opacity: colors.backgroundMain == SteampunkTheme.mahoganyDark ? 1.0 : 0.05, // Almost hide in Cyberpunk
           colorFilter: const ColorFilter.mode(
             Colors.black38,
             BlendMode.darken,
           ),
-        ),
+        ) : null,
       ),
       child: SafeArea(child: child),
     );
   }
 }
 
-class SteampunkButton extends StatefulWidget {
+class ThemedButton extends StatefulWidget {
   final String? label;
   final Widget? child;
   final VoidCallback onPressed;
@@ -39,7 +35,7 @@ class SteampunkButton extends StatefulWidget {
   final Color? textColor;
   final List<Color>? backgroundGradientColors;
 
-  const SteampunkButton({
+  const ThemedButton({
     super.key,
     this.label,
     this.child,
@@ -50,10 +46,10 @@ class SteampunkButton extends StatefulWidget {
   }) : assert(label != null || child != null, 'Label or Child must be provided');
 
   @override
-  State<SteampunkButton> createState() => _SteampunkButtonState();
+  State<ThemedButton> createState() => _ThemedButtonState();
 }
 
-class _SteampunkButtonState extends State<SteampunkButton> with SingleTickerProviderStateMixin {
+class _ThemedButtonState extends State<ThemedButton> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 

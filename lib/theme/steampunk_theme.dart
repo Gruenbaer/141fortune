@@ -27,6 +27,7 @@ class SteampunkTheme {
       accent: amberGlow,
       textMain: steamWhite,
       textContrast: leatherDark,
+      backgroundImagePath: 'assets/images/ui/background.png',
     );
 
     return ThemeData(

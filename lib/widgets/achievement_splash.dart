@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:provider/provider.dart';
 import '../models/achievement.dart';
+import '../models/game_settings.dart';
 
 class AchievementSplash extends StatefulWidget {
   final Achievement achievement;
@@ -48,7 +50,7 @@ class _AchievementSplashState extends State<AchievementSplash>
     // Start confetti and sound
     Future.delayed(const Duration(milliseconds: 400), () {
       _confettiController.play();
-      _playHornSound();
+      if (mounted) _playHornSound();
     });
   }
 
@@ -56,6 +58,9 @@ class _AchievementSplashState extends State<AchievementSplash>
     try {
       // Use AssetSource for local assets or UrlSource for web
       // For now, using a simple system beep sound
+      final soundEnabled = Provider.of<GameSettings>(context, listen: false).soundEnabled;
+      if (!soundEnabled) return;
+
       await _audioPlayer.setVolume(1.0);
       await _audioPlayer.setReleaseMode(ReleaseMode.stop);
       // Play a notification-like sound (you can replace with custom horn.mp3)

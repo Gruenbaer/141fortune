@@ -24,9 +24,16 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
   late AnimationController _effectController;
   late Animation<double> _scaleAnimation;
   
+  // Animation for last points box pulse
+  late AnimationController _lastPointsController;
+  late Animation<double> _lastPointsPulse;
+  
   // UI Logic: Visual Score (delayed update)
   late int _visualScore;
   Timer? _safetyTimer;
+  
+  // Track lastPoints for animation trigger
+  int? _previousLastPoints;
   
   // Key for Animation Targeting
   final GlobalKey scoreKey = GlobalKey();
@@ -46,12 +53,40 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
       curve: Curves.elasticOut,
     ));
     
+    // Last points pulse: 1.0 -> 3.0 -> 1.0 over 0.7s
+    _lastPointsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    
+    _lastPointsPulse = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 3.0), weight: 1), // Grow to 300%
+      TweenSequenceItem(tween: Tween(begin: 3.0, end: 1.0), weight: 1), // Shrink back
+    ]).animate(CurvedAnimation(
+      parent: _lastPointsController,
+      curve: Curves.easeInOut,
+    ));
+    
+    // Add listener to trigger rebuild when animation changes
+    _lastPointsController.addListener(() {
+      if (mounted) {
+        setState(() {}); // Trigger rebuild
+      }
+    });
+    
     _visualScore = widget.player.score; // Init with current
+    _previousLastPoints = widget.player.lastPoints;
   }
 
   @override
   void didUpdateWidget(PlayerPlaque oldWidget) {
     super.didUpdateWidget(oldWidget);
+    
+    // Trigger animation when lastPoints changes
+    if (widget.player.lastPoints != oldWidget.player.lastPoints) {
+      _previousLastPoints = oldWidget.player.lastPoints;
+      _lastPointsController.forward(from: 0.0); // Trigger pulse animation
+    }
     
     if (widget.player.score != oldWidget.player.score) {
       if (widget.player.score < oldWidget.player.score) {
@@ -81,6 +116,8 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
   @override
   void dispose() {
     _effectController.dispose();
+    _lastPointsController.dispose();
+    _safetyTimer?.cancel();
     super.dispose();
   }
 
@@ -239,40 +276,40 @@ class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderSta
                   Row(
                     mainAxisAlignment: widget.isLeft ? MainAxisAlignment.start : MainAxisAlignment.end,
                     children: [
-                      // Last Points (Left)
-                      if (widget.player.lastPoints != null && widget.player.lastPoints! > 0) ...[
-                        Container(
+                      // Last Points (Left) - Always shown, animated via listener
+                      Transform.scale(
+                        scale: _lastPointsPulse.value,
+                        child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: Colors.black38,
                             borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: colors.accent.withOpacity(0.5)),
+                            border: Border.all(
+                              color: (widget.player.lastPoints ?? 0) == 0
+                                ? Colors.grey.withOpacity(0.3)
+                                : ((widget.player.lastPoints ?? 0) < 0 
+                                    ? Colors.red.withOpacity(0.5) 
+                                    : colors.accent.withOpacity(0.5)),
+                            ),
                           ),
                           child: Text(
-                            '+${widget.player.lastPoints}',
+                            (widget.player.lastPoints ?? 0) > 0 
+                              ? '+${widget.player.lastPoints}' 
+                              : '${widget.player.lastPoints ?? 0}',
                             style: GoogleFonts.nunito(
                               textStyle: theme.textTheme.bodySmall,
-                              color: colors.accent,
+                              color: (widget.player.lastPoints ?? 0) == 0 
+                                ? Colors.grey 
+                                : ((widget.player.lastPoints ?? 0) < 0 ? Colors.red : colors.accent),
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.5,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                      ],
-                      // Spacer handled by mainAxisAlignment but we want pushing to edges if both present?
-                      // Actually user said: "Last points scored to the left. highest run HR and the number to the right."
-                      // And this is inside a Column.
-                      
-                      // Highest Run (Right)
-                      // If Last Points is not shown, we still want HR on right? Or just next to it?
-                      // "to the left" and "to the right" usually implies separation.
-                      if (widget.player.lastPoints == null || widget.player.lastPoints! <= 0)
-                        const Spacer(), // Push HR to right if alone
-                        
-                      if (widget.player.lastPoints != null && widget.player.lastPoints! > 0)
-                         const Spacer(), // Push apart if both
+                      ),
+                      const SizedBox(width: 8),
+                      const Spacer(), // Push HR to right
 
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

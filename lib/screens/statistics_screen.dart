@@ -82,7 +82,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           ),
         ],
       ),
-      body: SteampunkBackground(
+      body: ThemedBackground(
         child: SafeArea(
           child: _isLoading
               ? const Center(child: CircularProgressIndicator(color: SteampunkTheme.amberGlow))

@@ -126,7 +126,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       // We keep SteampunkBackground for now, but it should arguably use FortuneTheme's asset path
       // if available. Assuming SteampunkBackground is valid for now.
-      body: SteampunkBackground(
+      body: ThemedBackground(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(16),

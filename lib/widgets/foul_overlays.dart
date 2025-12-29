@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:provider/provider.dart';
+import '../models/game_settings.dart';
 
 /// Message Overlay: Fades in/out at screen center
 class FoulMessageOverlay extends StatefulWidget {
@@ -144,8 +146,9 @@ class _FoulPointsOverlayState extends State<FoulPointsOverlay> with SingleTicker
       widget.onFinish();
     });
     
-    // Play sound for negative points
-    if (widget.points < 0) {
+    // Play sound for negative points if enabled
+    final soundEnabled = Provider.of<GameSettings>(context, listen: false).soundEnabled;
+    if (widget.points < 0 && soundEnabled) {
       _audioPlayer.play(AssetSource('sounds/beeboo.wav'));
     }
   }

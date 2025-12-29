@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../models/game_settings.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/steampunk_widgets.dart';
@@ -24,8 +25,26 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize with default settings, but we'll copy current player names in didChangeDependencies
     _settings = GameSettings();
     _raceSliderValue = _settings.raceToScore.toDouble();
+  }
+  
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Copy last-used player names from the Provider if available
+    try {
+      final currentSettings = Provider.of<GameSettings>(context, listen: false);
+      if (_settings.player1Name == 'Player 1' && currentSettings.player1Name != 'Player 1') {
+        _settings = _settings.copyWith(player1Name: currentSettings.player1Name);
+      }
+      if (_settings.player2Name == 'Player 2' && currentSettings.player2Name != 'Player 2') {
+        _settings = _settings.copyWith(player2Name: currentSettings.player2Name);
+      }
+    } catch (e) {
+      // Provider not available, keep defaults
+    }
   }
 
   @override
@@ -342,7 +361,7 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
           const SizedBox(height: 32),
 
           // Start Game Button
-          SteampunkButton(
+          ThemedButton(
             label: 'START GAME',
             icon: Icons.play_circle_fill,
             onPressed: _startGame,
