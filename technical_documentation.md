@@ -3,7 +3,7 @@
 This document provides a comprehensive technical overview of the **14.1 Fortune** application, designed to help developers understand its architecture, core logic, and implementation details.
 
 ## 1. Overview
-**14.1 Fortune** is a specialized scoring application for **Straight Pool (14.1 Continuous)** billiards. It features a rich **Steampunk aesthetic** and handles complex rule enforcement including safe shots, break fouls, the 3-foul rule, and game history tracking.
+**14.1 Fortune** is a specialized scoring application for **Straight Pool (14.1 Continuous)** billiards. It features **multiple visual themes** (Cyberpunk and Steampunk, with Cyberpunk as the default) and handles complex rule enforcement including safe shots, break fouls, the 3-foul rule, and game history tracking.
 
 ## 2. Technology Stack
 *   **Framework**: [Flutter](https://flutter.dev/) (Dart SDK >=3.0.0 <4.0.0)
@@ -35,7 +35,7 @@ The project follows a standard scalable Flutter architecture separation concerns
     *   `settings_service.dart`: Persists user preferences.
     *   `player_service.dart`: Aggregates long-term player stats.
 *   **`widgets/`**: Reusable UI components.
-    *   `steampunk_widgets.dart`: Themed buttons and backgrounds.
+    *   `steampunk_widgets.dart`: Legacy themed widgets (being migrated to theme-agnostic components).
     *   `ball_button.dart`: Interactive billiard ball widget.
     *   `victory_splash.dart`: End-of-game overlay.
 *   **`l10n/`**: Localization resources (ARB files).
@@ -80,8 +80,10 @@ The app uses a dual-layer persistence strategy:
     *   **Completed Games**: Saved with final stats purely for historical records (snapshot is null to save space).
 
 ## 5. UI/UX Details
-The visual identity is a custom **Steampunk Theme**.
-*   **Theming**: `SteampunkTheme` defines usages of brass (`#B5A642`), mahogany (`#421C02`), and parchment colors.
+The app supports **multiple visual themes** managed through `FortuneTheme`:
+*   **Default Theme**: **Cyberpunk** - Modern neon aesthetics with cyan (`#00D9FF`) and purple accents
+*   **Alternative Theme**: **Steampunk** - Vintage brass (`#B5A642`), mahogany (`#421C02`), and parchment colors
+*   **Theme System**: `FortuneTheme` and `FortuneColors` provide theme-agnostic access to colors and styles
 *   **Custom Widgets**:
     *   Buttons use gradients and heavy borders to simulate metallic physical buttons.
     *   `PlayerPlaque` shows score, name, and inning in a stylized frame.
