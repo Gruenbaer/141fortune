@@ -50,6 +50,8 @@ class AppLocalizations {
       'threeFoulRule': '3-Foul-Regel',
       'threeFoulRuleSubtitle': '3 aufeinanderfolgende Fouls = -15 Punkte',
       'startGame': 'Spiel starten',
+      'noPlayerSelected': 'Kein Spieler ausgewählt',
+      'pleaseSelectBothPlayers': 'Bitte wählen Sie beide Spieler aus, bevor Sie das Spiel starten',
       
       // Settings
       'soundEffects': 'Soundeffekte',
@@ -202,6 +204,8 @@ class AppLocalizations {
       'threeFoulRule': '3-Foul Rule',
       'threeFoulRuleSubtitle': '3 consecutive fouls = -15 points',
       'startGame': 'Start Game',
+      'noPlayerSelected': 'No player selected',
+      'pleaseSelectBothPlayers': 'Please select both players before starting the game',
       
       // Settings
       'soundEffects': 'Sound Effects',
@@ -356,6 +360,8 @@ class AppLocalizations {
   String get threeFoulRule => translate('threeFoulRule');
   String get threeFoulRuleSubtitle => translate('threeFoulRuleSubtitle');
   String get startGame => translate('startGame');
+  String get noPlayerSelected => translate('noPlayerSelected');
+  String get pleaseSelectBothPlayers => translate('pleaseSelectBothPlayers');
   
   String get soundEffects => translate('soundEffects');
   String get enableGameSounds => translate('enableGameSounds');

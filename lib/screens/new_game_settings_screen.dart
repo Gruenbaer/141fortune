@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/game_settings.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/steampunk_widgets.dart';
-import '../widgets/player_name_input_dialog.dart';
+import '../services/player_service.dart';
 
 class NewGameSettingsScreen extends StatefulWidget {
   final Function(GameSettings) onStartGame;
@@ -21,31 +21,94 @@ class NewGameSettingsScreen extends StatefulWidget {
 class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
   late GameSettings _settings;
   double _raceSliderValue = 100;
+  bool _hasLoadedPlayerNames = false;
+  bool _initialSettingsLoaded = false;
+  
+  final PlayerService _playerService = PlayerService();
+  List<Player> _players = [];
+  bool _isLoadingPlayers = true;
 
   @override
   void initState() {
     super.initState();
-    // Initialize with default settings, but we'll copy current player names in didChangeDependencies
+    // Initialize with default settings
     _settings = GameSettings();
     _raceSliderValue = _settings.raceToScore.toDouble();
+    _loadPlayers();
+    
+    // Defer loading initial values from provider until after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInitialSettingsFromProvider();
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
   
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Copy last-used player names from the Provider if available
+  void _loadInitialSettingsFromProvider() {
+    if (!mounted) return;
+    
     try {
       final currentSettings = Provider.of<GameSettings>(context, listen: false);
-      if (_settings.player1Name == 'Player 1' && currentSettings.player1Name != 'Player 1') {
-        _settings = _settings.copyWith(player1Name: currentSettings.player1Name);
+      
+      // Only load last used names if current settings are empty (they will be initially)
+      // and provider has non-empty names
+      if (_settings.player1Name.isEmpty && currentSettings.player1Name.isNotEmpty) {
+        setState(() {
+          _settings = _settings.copyWith(player1Name: currentSettings.player1Name);
+        });
       }
-      if (_settings.player2Name == 'Player 2' && currentSettings.player2Name != 'Player 2') {
-        _settings = _settings.copyWith(player2Name: currentSettings.player2Name);
+      
+      if (_settings.player2Name.isEmpty && currentSettings.player2Name.isNotEmpty) {
+        setState(() {
+          _settings = _settings.copyWith(player2Name: currentSettings.player2Name);
+        });
       }
+      
+      setState(() {
+        _initialSettingsLoaded = true;
+      });
     } catch (e) {
-      // Provider not available, keep defaults
+      // Provider not available, ignore
     }
   }
+
+  Future<void> _loadPlayers() async {
+    final players = await _playerService.getAllPlayers();
+    if (mounted) {
+      setState(() {
+        _players = players;
+        _isLoadingPlayers = false;
+      });
+    }
+  }
+  
+  Future<void> _createPlayerInline(String name) async {
+    if (name.trim().isEmpty) return;
+    
+    try {
+      await _playerService.createPlayer(name.trim());
+      await _loadPlayers();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${AppLocalizations.of(context).playerCreated}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +180,7 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                   // Slider
                   Row(
                     children: [
-                      const Text('Custom: '),
+                      Text('${l10n.custom}: '),
                       Expanded(
                         child: Slider(
                           value: _raceSliderValue,
@@ -153,9 +216,9 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Max Innings',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.maxInnings,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   
@@ -175,7 +238,7 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                   // Slider (always visible)
                   Row(
                     children: [
-                      const Text('Custom: '),
+                      Text('${l10n.custom}: '),
                       Expanded(
                         child: Slider(
                           value: _settings.maxInnings.toDouble().clamp(0, 200),
@@ -195,7 +258,7 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                       SizedBox(
                         width: 80,
                         child: Text(
-                          _settings.maxInnings == 0 ? 'Unlimited' : '${_settings.maxInnings}',
+                          _settings.maxInnings == 0 ? l10n.unlimited : '${_settings.maxInnings}',
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center,
                         ),
@@ -216,35 +279,19 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Players',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.playersTitle,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   
-                  // Player 1
-                  ListTile(
-                    title: const Text('Player 1'),
-                    subtitle: Text(
-                      _settings.player1Name.isEmpty ? 'Tap to select' : _settings.player1Name,
-                      style: TextStyle(
-                        color: _settings.player1Name.isEmpty ? Colors.grey : null,
-                      ),
-                    ),
-                    trailing: const Icon(Icons.edit),
-                    onTap: () async {
-                      final name = await PlayerNameInputDialog.show(
-                        context,
-                        title: 'Player 1',
-                        initialName: _settings.player1Name,
-                        labelText: 'Player 1',
-                        hintText: 'Enter or select player',
-                      );
-                      if (name != null) {
-                        setState(() {
-                          _settings = _settings.copyWith(player1Name: name);
-                        });
-                      }
+                  // Player 1 Autocomplete
+                  _buildPlayerAutocomplete(
+                    label: l10n.player1,
+                    initialValue: _settings.player1Name,
+                    key: Key('player1_auto_$_initialSettingsLoaded'),
+                    onChanged: (name) {
+                      _settings = _settings.copyWith(player1Name: name);
                     },
                   ),
                   
@@ -252,7 +299,7 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                   
                   Row(
                     children: [
-                      const Text('Handicap: '),
+                      Text('${l10n.handicap}: '),
                       IconButton(
                         icon: const Icon(Icons.remove_circle_outline),
                         onPressed: _settings.player1Handicap > 0
@@ -275,29 +322,13 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                   
                   const SizedBox(height: 24),
                   
-                  // Player 2
-                  ListTile(
-                    title: const Text('Player 2'),
-                    subtitle: Text(
-                      _settings.player2Name.isEmpty ? 'Tap to select' : _settings.player2Name,
-                      style: TextStyle(
-                        color: _settings.player2Name.isEmpty ? Colors.grey : null,
-                      ),
-                    ),
-                    trailing: const Icon(Icons.edit),
-                    onTap: () async {
-                      final name = await PlayerNameInputDialog.show(
-                        context,
-                        title: 'Player 2',
-                        initialName: _settings.player2Name,
-                        labelText: 'Player 2',
-                        hintText: 'Enter or select player',
-                      );
-                      if (name != null) {
-                        setState(() {
-                          _settings = _settings.copyWith(player2Name: name);
-                        });
-                      }
+                  // Player 2 Autocomplete
+                  _buildPlayerAutocomplete(
+                    label: l10n.player2,
+                    initialValue: _settings.player2Name,
+                    key: Key('player2_auto_$_initialSettingsLoaded'),
+                    onChanged: (name) {
+                      _settings = _settings.copyWith(player2Name: name);
                     },
                   ),
                   
@@ -305,7 +336,7 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                   
                   Row(
                     children: [
-                      const Text('Handicap: '),
+                      Text('${l10n.handicap}: '),
                       IconButton(
                         icon: const Icon(Icons.remove_circle_outline),
                         onPressed: _settings.player2Handicap > 0
@@ -339,13 +370,13 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Additional Rules',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.additionalRules,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   SwitchListTile(
-                    title: const Text('3-Foul Rule'),
-                    subtitle: const Text('3 consecutive fouls = -15 points'),
+                    title: Text(l10n.threeFoulRule),
+                    subtitle: Text(l10n.threeFoulRuleSubtitle),
                     value: _settings.threeFoulRuleEnabled,
                     onChanged: (value) {
                       setState(() {
@@ -362,7 +393,7 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
 
           // Start Game Button
           ThemedButton(
-            label: 'START GAME',
+            label: l10n.startGame.toUpperCase(),
             icon: Icons.play_circle_fill,
             onPressed: _startGame,
             backgroundGradientColors: [
@@ -422,20 +453,91 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
     );
   }
 
-  void _startGame() {
-    // Use entered names or defaults if empty
-    final player1Name = _settings.player1Name.isEmpty 
-        ? 'Player 1' 
-        : _settings.player1Name;
-    final player2Name = _settings.player2Name.isEmpty 
-        ? 'Player 2' 
-        : _settings.player2Name;
+  Widget _buildPlayerAutocomplete({
+    required String label,
+    required String initialValue,
+    required Function(String) onChanged,
+    required Key key, // Use key to force rebuild when initialization completes
+  }) {
+    final l10n = AppLocalizations.of(context);
     
-    final finalSettings = _settings.copyWith(
-      player1Name: player1Name,
-      player2Name: player2Name,
+    return Autocomplete<String>(
+      key: key, 
+      initialValue: TextEditingValue(text: initialValue, selection: TextSelection.collapsed(offset: initialValue.length)),
+      optionsBuilder: (textEditingValue) {
+        if (textEditingValue.text.isEmpty) {
+          return const Iterable<String>.empty();
+        }
+        return _players
+            .map((p) => p.name)
+            .where((name) => name.toLowerCase().contains(
+                textEditingValue.text.toLowerCase()));
+      },
+      onSelected: (name) {
+        onChanged(name);
+      },
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        return ValueListenableBuilder<TextEditingValue>(
+          valueListenable: controller,
+          builder: (context, value, child) {
+            // Check if current text matches existing player
+            final isExistingPlayer = _players.any(
+              (p) => p.name.toLowerCase() == value.text.trim().toLowerCase()
+            );
+            
+            return TextField(
+              controller: controller,
+              focusNode: focusNode,
+              maxLength: 30,
+              maxLengthEnforcement: MaxLengthEnforcement.enforced,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: label,
+                hintText: l10n.enterOrSelectPlayer,
+                counterText: '',
+                suffixIcon: isExistingPlayer
+                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    : (value.text.trim().isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.add_circle, color: Colors.blue),
+                            tooltip: l10n.createPlayer,
+                            onPressed: () async {
+                              await _createPlayerInline(value.text.trim());
+                              // Autocomplete handles controller, but we need to notify parent
+                              onChanged(value.text.trim());
+                            },
+                          )
+                        : null),
+              ),
+              onChanged: (text) {
+                onChanged(text);
+              },
+              onSubmitted: (_) {
+                if (controller.text.trim().isNotEmpty) {
+                  onChanged(controller.text.trim());
+                }
+              },
+            );
+          },
+        );
+      },
     );
+  }
+
+  void _startGame() {
+    // Validate that both players are selected
+    if (_settings.player1Name.isEmpty || _settings.player2Name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).pleaseSelectBothPlayers),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
     
-    widget.onStartGame(finalSettings);
+    // Both players are selected, start the game
+    widget.onStartGame(_settings);
   }
 }

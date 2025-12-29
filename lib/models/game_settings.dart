@@ -20,8 +20,8 @@ class GameSettings {
   GameSettings({
     this.threeFoulRuleEnabled = true,
     this.raceToScore = 100,
-    this.player1Name = 'Player 1',
-    this.player2Name = 'Player 2',
+    this.player1Name = '',
+    this.player2Name = '',
     this.isLeagueGame = false,
     this.player1Handicap = 0,
     this.player2Handicap = 0,
@@ -60,8 +60,8 @@ class GameSettings {
   factory GameSettings.fromJson(Map<String, dynamic> json) => GameSettings(
         threeFoulRuleEnabled: json['threeFoulRuleEnabled'] ?? true,
         raceToScore: json['raceToScore'] ?? 100,
-        player1Name: json['player1Name'] ?? 'Player 1',
-        player2Name: json['player2Name'] ?? 'Player 2',
+        player1Name: json['player1Name'] ?? '',
+        player2Name: json['player2Name'] ?? '',
         isLeagueGame: json['isLeagueGame'] ?? false,
         player1Handicap: json['player1Handicap'] ?? 0,
         player2Handicap: json['player2Handicap'] ?? 0,
