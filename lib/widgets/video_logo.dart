@@ -21,15 +21,17 @@ class _VideoLogoState extends State<VideoLogo> {
     // Initialize video from assets
     _controller = VideoPlayerController.asset('assets/images/FoulAndFortuneAnimated.mp4')
       ..initialize().then((_) {
-        // Ensure the first frame is shown after the video is initialized
+        debugPrint("✅ Video Initialized Successfully");
         if (mounted) {
           setState(() {
             _initialized = true;
           });
           _controller.play();
-          _controller.setLooping(true); // Loop video
-          _controller.setVolume(0.0); // Enforce mute as requested
+          _controller.setLooping(true);
+          _controller.setVolume(0.0);
         }
+      }).catchError((error) {
+        debugPrint("❌ Video Initialization Error: $error");
       });
   }
 
@@ -45,8 +47,8 @@ class _VideoLogoState extends State<VideoLogo> {
       // Placeholder: Static Image (No clock!)
       return Center(
         child: Container(
-          width: 200,
-          height: 200,
+          width: 250,
+          height: 250,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.transparent, // or Colors.black ??
@@ -67,8 +69,8 @@ class _VideoLogoState extends State<VideoLogo> {
 
     return Center(
       child: Container(
-        width: 200, // Reduced from 250 (-20%)
-        height: 200,
+        width: 250, // Reduced from 250 (-20%) -> Back to 250
+        height: 250,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           // Transparent background, effectively just the clip
