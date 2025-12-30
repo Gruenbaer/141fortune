@@ -303,14 +303,15 @@ class DetailsScreen extends StatelessWidget {
           child: Text(
             p1Val,
             textAlign: TextAlign.center,
-            style: TextStyle(color: colors.textMain, fontSize: 16, fontFamily: 'Courier'),
+            // White text, larger font for readability
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontFamily: 'Courier', fontWeight: FontWeight.bold),
           ),
         ),
         Text(
           label.toUpperCase(),
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: colors.primaryBright, // Brighter for contrast
+            color: colors.primaryBright, 
             fontSize: 11, 
             fontWeight: FontWeight.bold
           ),
@@ -320,7 +321,8 @@ class DetailsScreen extends StatelessWidget {
           child: Text(
             p2Val,
             textAlign: TextAlign.center,
-            style: TextStyle(color: colors.textMain, fontSize: 16, fontFamily: 'Courier'),
+            // White text, larger font for readability
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontFamily: 'Courier', fontWeight: FontWeight.bold),
           ),
         ),
       ],
