@@ -20,7 +20,7 @@ class PlayerPlaque extends StatefulWidget {
   State<PlayerPlaque> createState() => PlayerPlaqueState();
 }
 
-class PlayerPlaqueState extends State<PlayerPlaque> with SingleTickerProviderStateMixin {
+class PlayerPlaqueState extends State<PlayerPlaque> with TickerProviderStateMixin {
   late AnimationController _effectController;
   late Animation<double> _scaleAnimation;
   
