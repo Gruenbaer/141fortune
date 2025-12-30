@@ -370,38 +370,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const SizedBox(height: 24),
 
-              // Info about 3-Foul Rule
-              if (_settings.threeFoulRuleEnabled)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.black45,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: fortuneTheme.primaryDark, width: 2),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.info_outline, color: fortuneTheme.primary, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            '3-FOUL PROTOCOL',
-                            style: theme.textTheme.labelLarge?.copyWith(color: fortuneTheme.primary),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '• 3 consecutive normal fouls = -15 points\n'
-                        '• Severe fouls do NOT count toward this rule\n'
-                        '• Counter resets after successful shot or penalty',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
+              // 3-Foul info box removed per user request (redundant)
 
               const SizedBox(height: 24),
               

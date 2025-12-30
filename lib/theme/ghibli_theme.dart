@@ -3,14 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'fortune_theme.dart';
 
 class GhibliTheme {
-  // Palette (Contrast Enhanced)
-  static const Color creamBg = Color(0xFFFAF9F0); // Brighter/Cleaner Cream for contrast
-  static const Color lushGreen = Color(0xFF4C7552); // Deeper, Richer Green
-  static const Color darkGreen = Color(0xFF355239);
-  static const Color skyBlue = Color(0xFF6B9AC4); // More vivid sky
-  static const Color berryRed = Color(0xFFD16B6E); // More vibrant red
-  static const Color sunYellow = Color(0xFFEBCA60); // Golden
-  static const Color charcoal = Color(0xFF2E2C29); // Darker Ink (near black)
+  // Palette (High Contrast)
+  static const Color creamBg = Color(0xFFFFFFFF); // Pure White for max contrast
+  static const Color lushGreen = Color(0xFF2E5E32); // Dark Forest Green
+  static const Color darkGreen = Color(0xFF1B381E);
+  static const Color skyBlue = Color(0xFF2C6B99); // Deep Vivid Blue
+  static const Color berryRed = Color(0xFFA63A3D); // Deep Red
+  static const Color sunYellow = Color(0xFFD4AC0D); // Deep Gold
+  static const Color charcoal = Color(0xFF111111); // Almost Black
   static const Color cloudWhite = Color(0xFFFFFFFF);
 
   static ThemeData get themeData {
