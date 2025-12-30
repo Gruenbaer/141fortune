@@ -3,14 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'fortune_theme.dart';
 
 class GhibliTheme {
-  // Palette (Whimsy & Wonder)
-  static const Color creamBg = Color(0xFFF7F3E2); // Paper/Canvas background
-  static const Color lushGreen = Color(0xFF6B8C6E); // Totoro Green
-  static const Color darkGreen = Color(0xFF4A6B4D);
-  static const Color skyBlue = Color(0xFF8CAAC6); // Muted Sky
-  static const Color berryRed = Color(0xFFC57C7E); // Mei's dress / Ponyo
-  static const Color sunYellow = Color(0xFFEBC96F); // Catbus Yellow
-  static const Color charcoal = Color(0xFF4A4844); // Soot sprites (soft black)
+  // Palette (Contrast Enhanced)
+  static const Color creamBg = Color(0xFFFAF9F0); // Brighter/Cleaner Cream for contrast
+  static const Color lushGreen = Color(0xFF4C7552); // Deeper, Richer Green
+  static const Color darkGreen = Color(0xFF355239);
+  static const Color skyBlue = Color(0xFF6B9AC4); // More vivid sky
+  static const Color berryRed = Color(0xFFD16B6E); // More vibrant red
+  static const Color sunYellow = Color(0xFFEBCA60); // Golden
+  static const Color charcoal = Color(0xFF2E2C29); // Darker Ink (near black)
   static const Color cloudWhite = Color(0xFFFFFFFF);
 
   static ThemeData get themeData {
