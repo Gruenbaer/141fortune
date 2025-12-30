@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import '../theme/steampunk_theme.dart'; // Keep for legacy constants if needed, or remove?
 import '../theme/fortune_theme.dart';
 
@@ -52,10 +53,12 @@ class ThemedButton extends StatefulWidget {
 class _ThemedButtonState extends State<ThemedButton> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
+  late int _seed; // Stable seed for randomizing decorations
 
   @override
   void initState() {
     super.initState();
+    _seed = math.Random().nextInt(100000); 
     _controller = AnimationController(
        duration: const Duration(milliseconds: 100),
        vsync: this,
@@ -93,7 +96,7 @@ class _ThemedButtonState extends State<ThemedButton> with SingleTickerProviderSt
             painter: colors.themeId == 'cyberpunk' 
                 ? CyberpunkFramePainter(colors) 
                 : (colors.themeId == 'ghibli' 
-                    ? GhibliFramePainter(colors) 
+                    ? GhibliFramePainter(colors, seed: _seed) 
                     : BrassFramePainter(colors)),
             child: Container(
               // Inner content area
@@ -321,12 +324,19 @@ class CyberpunkFramePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
+
+
 class GhibliFramePainter extends CustomPainter {
   final FortuneColors colors;
-  GhibliFramePainter(this.colors);
+  final int seed;
+  
+  GhibliFramePainter(this.colors, {required this.seed});
 
   @override
   void paint(Canvas canvas, Size size) {
+    // SEEDED RANDOM: Ensure consistent look for this specific button instance
+    final random = math.Random(seed);
+    
     final charcoal = const Color(0xFF4A4844);
     
     // 1. Organic Shape (Slightly irregular Pill)
@@ -335,6 +345,10 @@ class GhibliFramePainter extends CustomPainter {
     final h = size.height;
     final w = size.width;
     
+    // Add subtle wobble to the shape based on seed
+    final wobble1 = (random.nextDouble() - 0.5) * h * 0.1;
+    final wobble2 = (random.nextDouble() - 0.5) * h * 0.1;
+
     // Start Left Center
     path.moveTo(0, h / 2);
     
