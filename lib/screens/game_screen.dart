@@ -96,12 +96,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           backgroundColor: SteampunkTheme.mahoganyDark,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: const BorderSide(color: Colors.redAccent, width: 2) // Red border for warning
+              side: const BorderSide(color: Colors.amber, width: 2) // Yellow for warning
           ),
           title: Text(
               event.title, 
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)
+              style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)
           ),
           content: Text(
               event.message,

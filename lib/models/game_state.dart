@@ -433,11 +433,7 @@ class GameState extends ChangeNotifier {
         // 3-Foul! Queue the big one.
         eventQueue.add(FoulEvent(currentPlayer, -15, "Triple Foul!"));
         showThreeFoulPopup = true; // State persistence only
-        // Queue the Dialog as an Event for proper sequencing
-        eventQueue.add(WarningEvent(
-           "3 FOULS!", 
-           "Three consecutive fouls.\nPenalty: -15 Points."
-        ));
+        // Dialog Removed per user request (Animation is sufficient)
       } else if (scoredPoints != null) {
         // Show breakdown: positive points and foul penalty
         eventQueue.add(FoulEvent(currentPlayer, scoredPoints + penalty, "Foul!", positivePoints: scoredPoints, penalty: penalty));
