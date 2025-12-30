@@ -405,10 +405,13 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
           const SizedBox(height: 32),
 
           // Start Game Button
+          // Start Game Button
           ThemedButton(
-            label: l10n.startGame.toUpperCase(),
+            label: 'SET PLAYER TO START',
             icon: Icons.play_circle_fill,
-            onPressed: _startGame,
+            onPressed: (_settings.player1Name.isNotEmpty && _settings.player2Name.isNotEmpty) 
+                ? _startGame 
+                : null,
             backgroundGradientColors: [
               Colors.green.shade900,
               Colors.green.shade700,
@@ -467,17 +470,8 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
   }
 
   void _startGame() {
-    // Validate that both players are selected
-    if (_settings.player1Name.isEmpty || _settings.player2Name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).pleaseSelectBothPlayers),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
+    // Save settings globally (persisting player names)
+    Provider.of<Function(GameSettings)>(context, listen: false)(_settings);
     
     // Both players are selected, start the game
     widget.onStartGame(_settings);
