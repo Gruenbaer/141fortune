@@ -70,20 +70,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void showNewGameSettings(BuildContext context) {
+    // Capture the AchievementManager before showing the modal
+    // to avoid context issues when the modal is dismissed
+    final achievementManager = Provider.of<AchievementManager>(context, listen: false);
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => NewGameSettingsScreen(
+      builder: (modalContext) => NewGameSettingsScreen(
         onStartGame: (settings) {
-          Navigator.pop(context);
+          Navigator.pop(modalContext);
           Navigator.push(
-            context,
+            context,  // Use the outer context, not modalContext
             MaterialPageRoute(
               builder: (context) => ChangeNotifierProvider(
                 create: (_) => GameState(
                   settings: settings,
-                  achievementManager: Provider.of<AchievementManager>(context, listen: false),
+                  achievementManager: achievementManager,  // Use captured manager
                 ),
                 child: GameScreen(
                   settings: settings,
