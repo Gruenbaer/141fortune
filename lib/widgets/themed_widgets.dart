@@ -53,12 +53,15 @@ class ThemedButton extends StatefulWidget {
 class _ThemedButtonState extends State<ThemedButton> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  late int _seed; // Stable seed for randomizing decorations
+  late int _seed; 
+  static int _instanceCounter = 0; // Incrementer to prevent identical seeds on rapid creation
 
   @override
   void initState() {
     super.initState();
-    _seed = math.Random().nextInt(100000); 
+    _instanceCounter++;
+    // Combine random with unique counter to force variety
+    _seed = math.Random().nextInt(100000) + _instanceCounter * 71; 
     _controller = AnimationController(
        duration: const Duration(milliseconds: 100),
        vsync: this,
