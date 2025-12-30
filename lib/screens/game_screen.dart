@@ -653,35 +653,59 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                // Left: Inning label
-                                Text(
-                                  'Inning: ',
-                                  style: theme.textTheme.titleSmall?.copyWith(
-                                    color: colors.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                // Center: Inning number (larger, prominent)
-                                Text(
-                                  '${gameState.players.firstWhere((p) => p.isActive).currentInning}',
-                                  style: theme.textTheme.titleLarge?.copyWith(
-                                    color: colors.accent,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 24,
-                                    shadows: [
-                                      Shadow(blurRadius: 3, color: Colors.black, offset: Offset(1, 1)),
+                                // Left: Inning
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: 'Inning: ',
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          color: colors.primary,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: '${gameState.players.firstWhere((p) => p.isActive).currentInning}',
+                                        style: theme.textTheme.headlineSmall?.copyWith(
+                                          color: colors.accent,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 28,
+                                          shadows: [
+                                            const Shadow(blurRadius: 3, color: Colors.black, offset: Offset(1, 1)),
+                                          ],
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
                                 // Spacer
-                                const SizedBox(width: 24),
-                                // Right: Race to (smaller)
-                                Text(
-                                  'Race to ${gameState.raceToScore}',
-                                  style: theme.textTheme.titleSmall?.copyWith(
-                                    color: colors.primary.withOpacity(0.8),
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                const SizedBox(width: 32),
+                                // Right: Race to
+                                RichText(
+                                   text: TextSpan(
+                                     children: [
+                                       TextSpan(
+                                         text: 'Race to ',
+                                         style: theme.textTheme.titleMedium?.copyWith(
+                                           color: colors.primary.withOpacity(0.8),
+                                           fontWeight: FontWeight.bold,
+                                           fontSize: 18,
+                                         ),
+                                       ),
+                                       TextSpan(
+                                         text: '${gameState.raceToScore}',
+                                         style: theme.textTheme.headlineSmall?.copyWith(
+                                           color: colors.accent, // Green to match Inning
+                                           fontWeight: FontWeight.w900,
+                                           fontSize: 28,
+                                           shadows: [
+                                            const Shadow(blurRadius: 3, color: Colors.black, offset: Offset(1, 1)),
+                                           ],
+                                         ),
+                                       ),
+                                     ],
+                                   ),
                                 ),
                               ],
                             ),
