@@ -53,18 +53,19 @@ class PlayerPlaqueState extends State<PlayerPlaque> with TickerProviderStateMixi
       curve: Curves.elasticOut,
     ));
     
-    // Last points pulse: 1.0 -> 3.0 -> 1.0 over 0.7s
+    // Last points pulse: 1.0 -> 5.0 -> Hold -> 1.0
     _lastPointsController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 900), // Slightly longer total
     );
     
     _lastPointsPulse = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 5.0), weight: 1), // Grow to 500%
-      TweenSequenceItem(tween: Tween(begin: 5.0, end: 1.0), weight: 1), // Shrink back
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 5.0), weight: 20), // Grow
+      TweenSequenceItem(tween: ConstantTween(5.0), weight: 40), // Hold
+      TweenSequenceItem(tween: Tween(begin: 5.0, end: 1.0), weight: 40), // Shrink back
     ]).animate(CurvedAnimation(
       parent: _lastPointsController,
-      curve: Curves.easeInOut,
+      curve: Curves.easeOut,
     ));
     
     // Add listener to trigger rebuild when animation changes
@@ -302,7 +303,7 @@ class PlayerPlaqueState extends State<PlayerPlaque> with TickerProviderStateMixi
                               color: (widget.player.lastPoints ?? 0) == 0 
                                 ? Colors.grey 
                                 : ((widget.player.lastPoints ?? 0) < 0 ? Colors.red : colors.accent),
-                              fontSize: 10,
+                              fontSize: 16, // Increased from 10
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.5,
                             ),
@@ -327,7 +328,7 @@ class PlayerPlaqueState extends State<PlayerPlaque> with TickerProviderStateMixi
                               style: GoogleFonts.nunito(
                                 textStyle: theme.textTheme.bodySmall,
                                 color: colors.textMain.withOpacity(0.6),
-                                fontSize: 9,
+                                fontSize: 10, // Increased from 9
                                 letterSpacing: 0.5,
                               ),
                             ),
@@ -336,7 +337,7 @@ class PlayerPlaqueState extends State<PlayerPlaque> with TickerProviderStateMixi
                               style: GoogleFonts.nunito(
                                 textStyle: theme.textTheme.bodySmall,
                                 color: colors.primary,
-                                fontSize: 11,
+                                fontSize: 13, // Increased from 11
                                 fontWeight: FontWeight.bold,
                               ),
                             ),

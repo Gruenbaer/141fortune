@@ -1142,8 +1142,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         Text(
           label,
           style: const TextStyle(
-            color: Color(0xFFE0E0E0), // Much Brighter (Steam White) for contrast against black
-            fontSize: 10,
+            color: Color(0xFFE0E0E0),
+            fontSize: 12, // Increased label size
             fontWeight: FontWeight.bold,
             letterSpacing: 1.0,
           ),
@@ -1153,9 +1153,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           value,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 16,
+            fontSize: 20, // Increased value size (was 16/10)
             fontWeight: FontWeight.bold,
-            fontFamily: 'Courier', // Monospace for stats looks cool/techy
+            fontFamily: 'Courier',
           ),
         ),
       ],

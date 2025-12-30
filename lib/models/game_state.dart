@@ -505,6 +505,18 @@ class GameState extends ChangeNotifier {
     }
 
 
+    // RE-RACK DETECTION (Check First)
+    bool isReRack = false;
+    if (newBallCount == 1) {
+      isReRack = true;
+      // Queue re-rack animation event
+      eventQueue.add(ReRackEvent("Re-rack!"));
+      // Note: We do NOT reset rack here; UI handles it after splash
+    }
+
+    // Prepare Log Suffix
+    String reRackSuffix = isReRack ? " (Re-rack)" : "";
+
     // Log calculation
     if (points != 0 || foulText.isNotEmpty) {
       // Calculate effective displayed points for log
@@ -514,24 +526,14 @@ class GameState extends ChangeNotifier {
       }
       
       String sign = displayPoints > 0 ? "+" : "";
-      _logAction('${currentPlayer.name}: $sign$displayPoints pts$foulText (Left: $newBallCount)');
+      _logAction('${currentPlayer.name}: $sign$displayPoints pts$foulText (Left: $newBallCount)$reRackSuffix');
+    } else if (isReRack) {
+       // Special case: 0 points (Safe/Miss) but landing on Re-rack state (1 ball)
+       _logAction('${currentPlayer.name}: Re-rack');
     }
 
     // Update Rack State
     _updateRackCount(newBallCount);
-
-    // RE-RACK LOGIC (User Request: "If there is only one ball, a rerack is done.")
-    // Whether we arrived here by Pot, Foul, or Safe -> If 1 ball remains, we rack the other 14.
-    bool isReRack = false;
-    
-    if (newBallCount == 1) {
-      // _updateRackCount(15); // REMOVED: Delayed until after splash
-      
-      _logAction('${currentPlayer.name}: Re-rack');
-      // Queue re-rack animation event
-      eventQueue.add(ReRackEvent("Re-rack!"));
-      isReRack = true;
-    }
 
     bool turnEnded = false;
 
