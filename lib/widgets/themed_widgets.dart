@@ -390,27 +390,34 @@ class GhibliFramePainter extends CustomPainter {
   }
   
   void _drawLeaves(Canvas canvas, Size size, Paint borderPaint, Paint fillPaint) {
-    // Top Left Leaves
+    // Top Left Leaves - Overlapping the border slightly
     canvas.save();
-    canvas.translate(4, 4); 
-    canvas.rotate(-0.2);
+    // Position at the visual "corner" of the wobbly shape
+    canvas.translate(size.height * 0.2, size.height * 0.2); 
+    canvas.rotate(-0.4);
     
-    // Leaf 1
+    final leafPaint = Paint()..style = PaintingStyle.fill;
+
+    // Leaf 1 (Berry Red)
+    leafPaint.color = colors.secondary; 
+    
     final l1 = Path();
     l1.moveTo(0, 0);
-    l1.quadraticBezierTo(-8, -5, -12, 2);
-    l1.quadraticBezierTo(-4, 8, 0, 0);
+    l1.quadraticBezierTo(-10, -8, -14, 0); // Wider
+    l1.quadraticBezierTo(-6, 12, 0, 0);
     
-    canvas.drawPath(l1, fillPaint); // Fill same color
+    canvas.drawPath(l1, leafPaint); 
     canvas.drawPath(l1, borderPaint); // Border
     
-    // Leaf 2 (Smaller)
+    // Leaf 2 (Sun Yellow)
+    leafPaint.color = colors.accent;
+    
     final l2 = Path();
     l2.moveTo(0, 0);
-    l2.quadraticBezierTo(-2, -8, 2, -12);
-    l2.quadraticBezierTo(6, -6, 0, 0);
+    l2.quadraticBezierTo(2, -10, 8, -14);
+    l2.quadraticBezierTo(10, -4, 0, 0);
     
-    canvas.drawPath(l2, fillPaint);
+    canvas.drawPath(l2, leafPaint);
     canvas.drawPath(l2, borderPaint);
     
     canvas.restore();

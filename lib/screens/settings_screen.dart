@@ -352,7 +352,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     ),
                     RadioListTile<String>(
-                      title: Text('Whimsy & Wonder', style: theme.textTheme.bodyMedium),
+                      title: Text('Ghibli Style', style: theme.textTheme.bodyMedium),
                       subtitle: const Text('Nature & Magic'),
                       secondary: const Icon(Icons.nature_people, color: Color(0xFF6B8C6E)),
                       value: 'ghibli',
