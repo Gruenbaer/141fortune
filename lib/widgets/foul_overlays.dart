@@ -193,16 +193,20 @@ class _FoulMessageOverlayState extends State<FoulMessageOverlay> with SingleTick
                     child: FittedBox(
                       fit: BoxFit.contain,
                       child: Text(
-                        // Logic Update: Show ONLY penalty if present (e.g. "-1")
+                        // Logic Update: Fail-safe for Foul Animation
+                        // 1. Show penalty if available (e.g. "-1")
                         widget.penalty != null 
                             ? '${widget.penalty}' 
-                            : '${widget.points >= 0 ? "+" : ""}${widget.points}',
+                            // 2. If penalty missing but points negative, show points
+                            : (widget.points < 0 ? '${widget.points}' 
+                                // 3. If points positive (Pot+Foul) and penalty lost, avoid "+X". Show "Foul".
+                                : 'Foul'),
                         textAlign: TextAlign.center,
                         style: GoogleFonts.nunito(
                           fontSize: singleFontSize,
                           fontWeight: FontWeight.w900,
-                          // Use penalty color if penalty exists, otherwise based on points
-                          color: (widget.penalty != null || widget.points < 0) ? Colors.redAccent : Colors.greenAccent,
+                          // Always Red for Foul Overlay (since we removed Flying Points for normal play)
+                          color: Colors.redAccent,
                           shadows: [
                             const Shadow(blurRadius: 4, color: Colors.black, offset: Offset(1, 1)),
                           ],
