@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/game_settings.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/steampunk_widgets.dart';
+import '../widgets/player_name_field.dart';
 import '../services/player_service.dart';
 
 class NewGameSettingsScreen extends StatefulWidget {
@@ -285,13 +286,19 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // Player 1 Autocomplete
-                  _buildPlayerAutocomplete(
+                  // Player 1 Input
+                  PlayerNameField(
+                    key: const ValueKey('player1_input'),
                     label: l10n.player1,
                     initialValue: _settings.player1Name,
-                    key: const ValueKey('player1_autocomplete'),
+                    players: _players,
                     onChanged: (name) {
-                      _settings = _settings.copyWith(player1Name: name);
+                      setState(() {
+                        _settings = _settings.copyWith(player1Name: name);
+                      });
+                    },
+                    onCreatePlayer: () async {
+                      await _createPlayerInline(_settings.player1Name);
                     },
                   ),
                   
@@ -322,13 +329,19 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
                   
                   const SizedBox(height: 24),
                   
-                  // Player 2 Autocomplete
-                  _buildPlayerAutocomplete(
+                  // Player 2 Input
+                  PlayerNameField(
+                    key: const ValueKey('player2_input'),
                     label: l10n.player2,
                     initialValue: _settings.player2Name,
-                    key: const ValueKey('player2_autocomplete'),
+                    players: _players,
                     onChanged: (name) {
-                      _settings = _settings.copyWith(player2Name: name);
+                      setState(() {
+                        _settings = _settings.copyWith(player2Name: name);
+                      });
+                    },
+                    onCreatePlayer: () async {
+                      await _createPlayerInline(_settings.player2Name);
                     },
                   ),
                   
@@ -450,83 +463,6 @@ class _NewGameSettingsScreenState extends State<NewGameSettingsScreen> {
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
-    );
-  }
-
-  Widget _buildPlayerAutocomplete({
-    required String label,
-    required String initialValue,
-    required Function(String) onChanged,
-    required Key key, // Use key to force rebuild when initialization completes
-  }) {
-    return Autocomplete<String>(
-      key: key, 
-      initialValue: TextEditingValue(
-        text: initialValue,
-        selection: TextSelection.collapsed(
-          offset: initialValue.length.clamp(0, initialValue.length),
-        ),
-      ),
-      optionsBuilder: (textEditingValue) {
-        if (textEditingValue.text.isEmpty) {
-          return const Iterable<String>.empty();
-        }
-        return _players
-            .map((p) => p.name)
-            .where((name) => name.toLowerCase().contains(
-                textEditingValue.text.toLowerCase()));
-      },
-      onSelected: (name) {
-        onChanged(name);
-      },
-      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-        // Get l10n from the fieldViewBuilder's context, not the outer context
-        final l10n = AppLocalizations.of(context);
-        
-        return ValueListenableBuilder<TextEditingValue>(
-          valueListenable: controller,
-          builder: (context, value, child) {
-            // Check if current text matches existing player
-            final isExistingPlayer = _players.any(
-              (p) => p.name.toLowerCase() == value.text.trim().toLowerCase()
-            );
-            
-            return TextField(
-              controller: controller,
-              focusNode: focusNode,
-              maxLength: 30,
-              maxLengthEnforcement: MaxLengthEnforcement.enforced,
-              textCapitalization: TextCapitalization.words,
-              decoration: InputDecoration(
-                labelText: label,
-                hintText: l10n.enterOrSelectPlayer,
-                counterText: '',
-               suffixIcon: isExistingPlayer
-                    ? const Icon(Icons.check_circle, color: Colors.green)
-                    : (value.text.trim().isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.add_circle, color: Colors.blue),
-                            tooltip: l10n.createPlayer,
-                            onPressed: () async {
-                              await _createPlayerInline(value.text.trim());
-                              // Autocomplete handles controller, but we need to notify parent
-                              onChanged(value.text.trim());
-                            },
-                          )
-                        : null),
-              ),
-              onChanged: (text) {
-                onChanged(text);
-              },
-              onSubmitted: (_) {
-                if (controller.text.trim().isNotEmpty) {
-                  onChanged(controller.text.trim());
-                }
-              },
-            );
-          },
-        );
-      },
     );
   }
 
