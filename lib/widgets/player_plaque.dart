@@ -60,8 +60,8 @@ class PlayerPlaqueState extends State<PlayerPlaque> with TickerProviderStateMixi
     );
     
     _lastPointsPulse = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 3.0), weight: 1), // Grow to 300%
-      TweenSequenceItem(tween: Tween(begin: 3.0, end: 1.0), weight: 1), // Shrink back
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 5.0), weight: 1), // Grow to 500%
+      TweenSequenceItem(tween: Tween(begin: 5.0, end: 1.0), weight: 1), // Shrink back
     ]).animate(CurvedAnimation(
       parent: _lastPointsController,
       curve: Curves.easeInOut,

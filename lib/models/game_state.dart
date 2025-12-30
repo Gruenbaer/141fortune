@@ -493,8 +493,7 @@ class GameState extends ChangeNotifier {
          if (points > 0) {
            final scoredPoints = (points * currentPlayer.handicapMultiplier).round();
            currentPlayer.addScore(scoredPoints);
-           // Queue animation event for positive points
-           eventQueue.add(FoulEvent(currentPlayer, scoredPoints, ""));
+           // Removed FlyingPointsOverlay event per user request
          } else {
            // Negative points? Logic usually prevents this unless input error.
            // If balls tapped < balls previous, points is positive.
@@ -556,9 +555,7 @@ class GameState extends ChangeNotifier {
         turnEnded = true; 
         _logAction('${currentPlayer.name}: Miss/Safe (0 pts)');
         currentPlayer.incrementSaves(); 
-        if (points == 0) {
-           eventQueue.add(FoulEvent(currentPlayer, 0, ""));
-        } 
+        // Removed 0-point event per user request
       }
     } else {
       if (currentFoulMode == FoulMode.severe) {
@@ -640,29 +637,6 @@ class GameState extends ChangeNotifier {
     currentPlayer.addScore(multipliedPoints);
     _logAction('${currentPlayer.name}: Double-sack! +$multipliedPoints$foulText');
     
-    // Queue animation events - show breakdown if there's a penalty
-    if (penalty != 0) {
-      // Show breakdown: positive points (green) and penalty (red)
-      int multipliedBalls = (ballsRemaining * currentPlayer.handicapMultiplier).round();
-      eventQueue.add(FoulEvent(
-        currentPlayer, 
-        multipliedPoints, 
-        "",
-        positivePoints: multipliedBalls,
-        penalty: penalty,
-      ));
-    } else {
-      // No penalty - just show total
-      eventQueue.add(FoulEvent(currentPlayer, multipliedPoints, ""));
-    }
-    
-    // Queue rerack animation
-    eventQueue.add(ReRackEvent("Re-rack!"));
-    
-    // _resetRack(); // REMOVED: Delayed.
-    // Clear activeBalls to grey out all numbered balls (1-15); white ball (0) stays visible
-    activeBalls.clear();
-
     // Check win BEFORE potentially switching player
     _checkWinCondition();
 
@@ -697,8 +671,7 @@ class GameState extends ChangeNotifier {
     currentPlayerIndex = 1 - currentPlayerIndex;
     
     currentPlayer.isActive = true;
-    currentPlayer.lastPoints = null; // Clear old lastPoints for new turn
-
+    
     // Check for 2-Foul Warning upon entering turn
     if (foulTracker.threeFoulRuleEnabled && currentPlayer.consecutiveFouls == 2) {
       // Replaced showTwoFoulWarning flag with Event
