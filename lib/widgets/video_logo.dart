@@ -42,11 +42,26 @@ class _VideoLogoState extends State<VideoLogo> {
   @override
   Widget build(BuildContext context) {
     if (!_initialized) {
-      // Fallback or Loading
-      return const SizedBox(
-        width: 200,
-        height: 200,
-        child: Center(child: CircularProgressIndicator()),
+      // Placeholder: Static Image (No clock!)
+      return Center(
+        child: Container(
+          width: 200,
+          height: 200,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.transparent, // or Colors.black ??
+            boxShadow: [
+               BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+            ],
+            border: Border.all(color: const Color(0xFFB8860B).withOpacity(0.5), width: 2), 
+          ),
+          child: ClipOval(
+            child: Image.asset(
+              'assets/images/static_logo.jpg',
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
       );
     }
 
